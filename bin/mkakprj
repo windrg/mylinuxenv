@@ -1,0 +1,22 @@
+#!/bin/sh
+#echo extract the really compiled kernel sources...!!!
+#find ./ -name '*.cmd' | xargs grep -h '\.[chS])* *\\$' | sed 's/)//' | sed 's/\\//' | sed 's/$(wildcard//' | sed 's/  *//' > f.txt
+#find ./ -name '*.[cChHS]' > f.txt
+#find ./ -name '*.[cChH]pp' >> f.txt
+#find ./ -name '*.mk' >> f.txt
+#find ./ -name '*.lds' | grep arm >> f.txt
+#find ./ -name '*.java' >> f.txt
+#find ./ -name 'Makefile' >> f.txt
+
+echo finding files...
+find . -path ./out -prune -o -regex '.*\.\([chCH]\|cc\|CC\|mk\|java\|xml\|lds\|htf\|py\|sh\|aidl\|conf\|rc\|cpp\)' > ./f.txt
+find ./ -path ./out -prune -o -name 'Makefile' >> f.txt
+#kext ./f.txt > cscope.files
+mv ./f.txt cscope.files
+echo ctagging...
+ctags -L cscope.files
+cp cscope.files cscope.out
+#echo launch the CSCOPE...!!
+echo cscoping...
+cscope -bqk -f cscope.out
+echo done

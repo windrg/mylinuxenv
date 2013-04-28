@@ -1,0 +1,5 @@
+#!/bin/sh
+export CWD=$(pwd)
+export CSCOPE_DB=$(pwd)/cscope.out
+export CTAGS_DB=$(pwd)/tags
+cscope -d

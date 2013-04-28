@@ -1,0 +1,4 @@
+#!/bin/sh
+rm ./f.txt
+rm ./cscope.*
+rm ./tags

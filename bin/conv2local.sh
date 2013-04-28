@@ -1,0 +1,27 @@
+#!/bin/sh
+mv arm-linux-androideabi-addr2line         aaddr2line         
+mv arm-linux-androideabi-gprof agprof
+mv arm-linux-androideabi-ar                aar                
+mv arm-linux-androideabi-ld ald
+mv arm-linux-androideabi-as                aas                
+mv arm-linux-androideabi-ld.bfd ald.bfd
+mv arm-linux-androideabi-c++               ac++               
+mv arm-linux-androideabi-ld.gold ald.gold
+mv arm-linux-androideabi-c++filt           ac++filt           
+mv arm-linux-androideabi-nm anm
+mv arm-linux-androideabi-cpp               acpp               
+mv arm-linux-androideabi-objcopy aobjcopy
+mv arm-linux-androideabi-elfedit aelfedit           
+mv arm-linux-androideabi-objdump aobjdump
+mv arm-linux-androideabi-g++ ag++               
+mv arm-linux-androideabi-ranlib aranlib
+mv arm-linux-androideabi-gcc agcc               
+mv arm-linux-androideabi-readelf areadelf
+mv arm-linux-androideabi-gcc-4.6.x-google  agcc-4.6.x-google  
+mv arm-linux-androideabi-run arun
+mv arm-linux-androideabi-gcov agcov              
+mv arm-linux-androideabi-size asize
+mv arm-linux-androideabi-gdb agdb               
+mv arm-linux-androideabi-strings astrings
+mv arm-linux-androideabi-gdbtui agdbtui            
+mv arm-linux-androideabi-strip astrip
