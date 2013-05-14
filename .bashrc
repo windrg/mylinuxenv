@@ -110,6 +110,8 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
+export EDITOR=/usr/bin/vim
+
 export PATH=${PATH}:/home/cysh/bin
 
 # distcc
@@ -125,10 +127,6 @@ export DISTCC_VERBOSE=1
 #export CCACHE_LOGFILE=/tmp/ccache.log
 #export PATH=/usr/lib/ccache:${PATH}
 
-
 #git config
-git config --global user.name "WinDragon"
-git config --global user.email windrg00@gmail.com 
-
-
-
+#git config --global user.name "WinDragon"
+#git config --global user.email windrg00@gmail.com 
