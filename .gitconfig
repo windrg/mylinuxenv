@@ -1,8 +1,6 @@
 [user]
 	name = WinDragon
 	email = windrg00@gmail.com
-[core]
-	editor = vim
 [color]
 	ui = auto
 
