@@ -1,7 +1,7 @@
 " FILE:     autoload/conque_term.vim {{{
 " AUTHOR:   Nico Raffo <nicoraffo@gmail.com>
 " WEBSITE:  http://conque.googlecode.com
-" MODIFIED: 2011-09-02
+" MODIFIED: 2011-09-12
 " VERSION:  2.3, for Vim 7.0
 " LICENSE:
 " Conque - Vim terminal/console emulator
@@ -34,6 +34,12 @@
 
 " {{{
 
+" Don't source twice
+if exists('g:ConqueTerm_TermLoaded')
+    finish
+endif
+let g:ConqueTerm_TermLoaded = 1
+
 " load plugin file if it hasn't already been loaded (e.g. conque_term#foo() is used in .vimrc)
 if !exists('g:ConqueTerm_Loaded')
     runtime! plugin/conque_term.vim
@@ -44,11 +50,14 @@ let s:scriptdir = expand("<sfile>:h") . '/'
 let s:scriptdirpy = expand("<sfile>:h") . '/conque_term/'
 
 " global list of terminal instances
-let s:term_obj = {'idx': 1, 'var': '', 'is_buffer': 1, 'active': 1, 'buffer_name': '', 'command': ''}
+let s:term_obj = {'idx': 1, 'var': '', 'is_buffer': 1, 'active': 1, 'buffer_name': '', 'buffer_number' : -1, 'command': ''}
 let g:ConqueTerm_Terminals = {}
 
 " global lists of registered functions
-let s:hooks = { 'after_startup': [], 'buffer_enter': [], 'buffer_leave': [], 'after_keymap': [] }
+let s:hooks = { 'after_startup': [], 'buffer_enter': [], 'buffer_leave': [], 'after_keymap': [], 'after_close': [] }
+
+" Number of currently opened terminals
+let s:term_count = 0
 
 " required for session support
 if g:ConqueTerm_SessionSupport == 1
@@ -66,12 +75,14 @@ let g:ConqueTerm_TerminalsString = ''
 " init terminal counter
 let g:ConqueTerm_Idx = 0
 
-" we clobber this value later
+" to save the users &updatetime. This is not a constant
 let s:save_updatetime = &updatetime
+
+" if nonzero restore the &updatetime when all terminals are closed
+let s:reset_updatetime = 1
 
 " have we called the init() function yet?
 let s:initialized = 0
-
 
 " }}}
 
@@ -152,7 +163,8 @@ function! conque_term#fail(feature) " {{{
 endfunction " }}}
 
 " Go through various system checks before attempting to launch conque
-function! conque_term#dependency_check() " {{{
+function! conque_term#dependency_check(...) " {{{
+    let show_messages = get(a:000, 0, 1)
 
     " don't recheck the second time 'round
     if s:initialized == 1
@@ -185,7 +197,9 @@ function! conque_term#dependency_check() " {{{
             let pytest = 'python'
         endif
         if has(pytest)
-            echohl WarningMsg | echomsg "Python " . g:ConqueTerm_PyVersion . " interface is not installed, using Python " . py_alternate . " instead" | echohl None
+            if show_messages
+                echohl WarningMsg | echomsg "Python " . g:ConqueTerm_PyVersion . " interface is not installed, using Python " . py_alternate . " instead" | echohl None
+            endif
             let g:ConqueTerm_PyVersion = py_alternate
             if pytest == 'python3'
                 let s:py = 'py3'
@@ -197,7 +211,9 @@ function! conque_term#dependency_check() " {{{
 
     " test if we actually found a python version
     if s:py == ''
-        call conque_term#fail('python')
+        if show_messages
+            call conque_term#fail('python')
+        endif
         return 0
     endif
 
@@ -215,14 +231,18 @@ function! conque_term#dependency_check() " {{{
         try
             sil exe s:py . " import ctypes"
         catch
-            call conque_term#fail('ctypes')
+            if show_messages
+                call conque_term#fail('ctypes')
+            endif
             return 0
         endtry
     endif
 
     " if we're using Windows, make sure we can finde python executable
     if s:platform == 'windows' && conque_term#find_python_exe() == ''
-        call conque_term#fail('python_exe')
+        if show_messages
+            call conque_term#fail('python_exe')
+        endif
         return 0
     endif
 
@@ -235,13 +255,13 @@ function! conque_term#dependency_check() " {{{
         if line =~ '^ ' || line =~ '^--' || line =~ 'matchparen'
             continue
         endif
-        if g:ConqueTerm_StartMessages
+        if g:ConqueTerm_StartMessages && show_messages
             echohl WarningMsg | echomsg "Warning: Global CursorHoldI and CursorMovedI autocommands may cause ConqueTerm to run slowly." | echohl None
         endif
     endfor
 
     " check for compatible mode
-    if &compatible == 1
+    if &compatible == 1 && show_messages
         echohl WarningMsg | echomsg "Warning: Conque may not function normally in 'compatible' mode." | echohl None
     endif
 
@@ -271,7 +291,7 @@ endfunction " }}}
 "    let msg_show = 1
 "    let msg_ct = 1
 "
-"    " we can write to conque_term directory
+"    " we can write to conque term directory
 "    if filewritable(s:scriptdirpy) == 2
 "
 "        if filewritable(msg_file)
@@ -438,6 +458,12 @@ function! conque_term#open(...) "{{{
     let vim_startup_commands = get(a:000, 1, [])
     let return_to_current  = get(a:000, 2, 0)
     let is_buffer  = get(a:000, 3, 1)
+    
+    if has('unix')
+        let term_type = get(a:000, 4, 'Conque()')
+    else
+        let term_type = get(a:000, 4, 'ConqueSole()')
+    endif
 
     " dependency check
     if !conque_term#dependency_check()
@@ -500,13 +526,14 @@ function! conque_term#open(...) "{{{
         let options["offset"] = 0 " g:ConqueTerm_StartMessages * 10
 
         if s:platform == 'unix'
-            execute s:py . ' ' . g:ConqueTerm_Var . ' = Conque()'
+            " Initialize conque terminal object
+            execute s:py . ' ' . g:ConqueTerm_Var . ' = ' . term_type
             execute s:py . ' ' . g:ConqueTerm_Var . ".open()"
         else
             " find python.exe and communicator
             let py_exe = conque_term#find_python_exe()
             let py_vim = s:scriptdirpy . 'conque_sole_communicator.py'
-            execute s:py . ' ' . g:ConqueTerm_Var . ' = ConqueSole()'
+            execute s:py . ' ' . g:ConqueTerm_Var . ' = ' . term_type
             execute s:py . ' ' . g:ConqueTerm_Var . ".open()"
 
             if g:ConqueTerm_ColorMode == 'conceal'
@@ -522,6 +549,11 @@ function! conque_term#open(...) "{{{
     if is_buffer
         call conque_term#set_mappings('start')
     endif
+
+    if s:term_count == 0
+        let s:save_updatetime = &updatetime
+    endif
+    let s:term_count = s:term_count + 1
 
     " call user defined functions
     call conque_term#call_hooks('after_startup', t_obj)
@@ -543,7 +575,7 @@ function! conque_term#subprocess(command) " {{{
     
     let t_obj = conque_term#open(a:command, [], 0, 0)
     if !exists('b:ConqueTerm_Var')
-        call conque_term#on_blur()
+        call conque_term#on_blur(0)
         sil exe s:py . ' ' . g:ConqueTerm_Var . '.idle()'
     endif
     return t_obj
@@ -597,6 +629,8 @@ function! conque_term#key_press() "{{{
     sil let v:char = ''
 endfunction " }}}
 
+
+
 " set key mappings and auto commands
 function! conque_term#set_mappings(action) "{{{
 
@@ -635,15 +669,21 @@ function! conque_term#set_mappings(action) "{{{
         sil exe 'autocmd ' . b:ConqueTerm_Var . ' BufEnter <buffer> ' . s:py . ' ' . b:ConqueTerm_Var . '.update_window_size()'
         sil exe 'autocmd ' . b:ConqueTerm_Var . ' VimResized ' . s:py . ' ' . b:ConqueTerm_Var . '.update_window_size()'
 
-        " set/reset updatetime on entering/exiting buffer
         sil exe 'autocmd ' . b:ConqueTerm_Var . ' BufEnter <buffer> call conque_term#on_focus()'
-        sil exe 'autocmd ' . b:ConqueTerm_Var . ' BufLeave <buffer> call conque_term#on_blur()'
+        sil exe 'autocmd ' . b:ConqueTerm_Var . ' BufLeave <buffer> call conque_term#on_blur(1)'
 
         " reposition cursor when going into insert mode
         sil exe 'autocmd ' . b:ConqueTerm_Var . ' InsertEnter <buffer> ' . s:py . ' ' . b:ConqueTerm_Var . '.insert_enter()'
+        sil exe 'autocmd ' . b:ConqueTerm_Var . ' InsertEnter <buffer> call s:insert_enter()'
+        sil exe 'autocmd ' . b:ConqueTerm_Var . ' InsertLeave <buffer> call s:insert_leave()'
 
-        " poll for more output
-        sil exe 'autocmd ' . b:ConqueTerm_Var . ' CursorHoldI <buffer> ' . s:py . ' ' .  b:ConqueTerm_Var . '.auto_read()'
+        " How to poll for more output
+        if g:ConqueTerm_ReadUnfocused
+            sil exe 'autocmd ' . b:ConqueTerm_Var . ' CursorHoldI <buffer> call conque_term#read_all(1)'
+            sil exe 'autocmd ' . b:ConqueTerm_Var . ' CursorHold <buffer> call conque_term#read_all(0)'
+        else
+            sil exe 'autocmd ' . b:ConqueTerm_Var . ' CursorHoldI <buffer> ' . s:py . ' ' .  b:ConqueTerm_Var . '.auto_read()'
+        endif
     endif
     " }}}
 
@@ -659,17 +699,29 @@ function! conque_term#set_mappings(action) "{{{
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-' . nr2char(64 + c) . '>'
         endif
     endfor
-    " bonus mapping: send <C-c> in normal mode to terminal as well for panic interrupts
-    if l:action == 'start'
-        sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-c> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_ord(3)<CR>'
-        sil exe 'n' . map_modifier . 'map <silent> <buffer> <C-c> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_ord(3)<CR>'
+
+    if exists('g:ConqueTerm_Interrupt')
+        " Use user defined key binding to send interrupt to terminal in normal and insert mode
+        if l:action == 'start'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> ' . g:ConqueTerm_Interrupt . ' <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_ord(3)<CR>'
+            sil exe 'n' . map_modifier . 'map <silent> <buffer> ' . g:ConqueTerm_Interrupt . ' <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_ord(3)<CR>'
+        else
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> ' . g:ConqueTerm_Interrupt
+            sil exe 'n' . map_modifier . 'map <silent> <buffer> ' . g:ConqueTerm_Interrupt
+        endif
     else
-        sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-c>'
-        sil exe 'n' . map_modifier . 'map <silent> <buffer> <C-c>'
+        " Use default key binding to send interrupt to terminal in normal and insert mode
+        if l:action == 'start'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-c> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_ord(3)<CR>'
+            sil exe 'n' . map_modifier . 'map <silent> <buffer> <C-c> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_ord(3)<CR>'
+        else
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-c>'
+            sil exe 'n' . map_modifier . 'map <silent> <buffer> <C-c>'
+        endif
     endif
 
     " leave insert mode
-    if !exists('g:ConqueTerm_EscKey') || g:ConqueTerm_EscKey == '<Esc>'
+    if !exists('g:ConqueTerm_EscKey') || g:ConqueTerm_EscKey =~ '<[Ee][Ss][Cc]>'
         " use <Esc><Esc> to send <Esc> to terminal
         if l:action == 'start'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Esc><Esc> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_ord(27)<CR>'
@@ -727,10 +779,22 @@ function! conque_term#set_mappings(action) "{{{
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Space> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u(" "))<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-BS> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x08"))<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Space> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u(" "))<CR>'
+
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Up> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[A"))<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Down> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[B"))<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Right> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[C"))<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Left> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[D"))<CR>'
+
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Up> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[A"))<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Down> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[B"))<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Right> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[C"))<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Left> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[D"))<CR>'
+
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Up> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[A"))<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Down> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[B"))<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Right> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[C"))<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Left> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1b[D"))<CR>'
+
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Home> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1bOH"))<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <End> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write(u("\x1bOF"))<CR>'
         else
@@ -744,6 +808,11 @@ function! conque_term#set_mappings(action) "{{{
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Down> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk(' . s:windows_vk.VK_DOWN . ')<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Right> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk(' . s:windows_vk.VK_RIGHT . ')<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <Left> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk(' . s:windows_vk.VK_LEFT . ')<CR>'
+
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Up> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk(' . s:windows_vk.VK_UP . ')<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Down> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk(' . s:windows_vk.VK_DOWN . ')<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Right> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk(' . s:windows_vk.VK_RIGHT . ')<CR>'
+            sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Left> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk(' . s:windows_vk.VK_LEFT . ')<CR>'
 
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Up> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk("' . s:windows_vk.VK_UP_CTL . '")<CR>'
             sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Down> <C-o>:' . s:py . ' ' . b:ConqueTerm_Var . '.write_vk("' . s:windows_vk.VK_DOWN_CTL . '")<CR>'
@@ -759,10 +828,22 @@ function! conque_term#set_mappings(action) "{{{
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <Space>'
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-BS>'
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Space>'
+
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <Up>'
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <Down>'
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <Right>'
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <Left>'
+
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Up>'
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Down>' 
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Right>'
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <S-Left>'
+
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Up>'
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Down>'
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Right>'
+        sil exe 'i' . map_modifier . 'map <silent> <buffer> <C-Left>'
+
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <Home>'
         sil exe 'i' . map_modifier . 'map <silent> <buffer> <End>'
     endif
@@ -910,8 +991,26 @@ function! conque_term#init() " {{{
 
 endfunction " }}}
 
+function! s:buffer_update(insert_mode) "{{{
+    " restart updatetime
+    if a:insert_mode
+        "let p = getpos('.')
+        if col(".") == col("$")
+          sil exe 'call feedkeys("\<Right>", "n")'
+        else
+          sil exe 'call feedkeys("\<Right>\<Left>", "n")'
+        endif
+        "call setpos('.', p)
+    else
+        call feedkeys("f\e", "n")
+    endif
+endfunction " }}}
+
 " read from all known conque buffers
 function! conque_term#read_all(insert_mode) "{{{
+
+    let term_running = 0
+    let buffer = bufnr("%")
 
     for i in range(1, g:ConqueTerm_Idx)
         try
@@ -919,7 +1018,13 @@ function! conque_term#read_all(insert_mode) "{{{
                 continue
             endif
 
-            let output = g:ConqueTerm_Terminals[i].read(1)
+            let term_running = 1
+
+            if g:ConqueTerm_Terminals[i].buffer_number == buffer
+                sil exe s:py . ' ' .  b:ConqueTerm_Var . '.auto_read(False)'
+            else
+                call g:ConqueTerm_Terminals[i].read(1)
+            endif
 
             if !g:ConqueTerm_Terminals[i].is_buffer && exists('*g:ConqueTerm_Terminals[i].callback')
                 call g:ConqueTerm_Terminals[i].callback(output)
@@ -929,18 +1034,8 @@ function! conque_term#read_all(insert_mode) "{{{
         endtry
     endfor
 
-    " restart updatetime
-    if a:insert_mode
-        "call feedkeys("\<C-o>f\e", "n")
-        let p = getpos('.')
-        if p[1] == 1
-          sil exe 'call feedkeys("\<Down>\<Up>", "n")'
-        else
-          sil exe 'call feedkeys("\<Up>\<Down>", "n")'
-        endif
-        call setpos('.', p)
-    else
-        call feedkeys("f\e", "n")
+    if term_running
+        call s:buffer_update(a:insert_mode)
     endif
 
 endfunction "}}}
@@ -975,9 +1070,6 @@ function! conque_term#on_focus(...) " {{{
         autocmd! ConqueTerm CursorHold *
     endif
 
-    " set poll interval to 50ms
-    set updatetime=50
-
     " resume subprocess fast polling
     if startup == 0 && exists('b:ConqueTerm_Var')
         sil exe s:py . ' ' . g:ConqueTerm_Var . '.resume()'
@@ -995,9 +1087,24 @@ function! conque_term#on_focus(...) " {{{
 
 endfunction " }}}
 
+function! s:set_term_updatetime(time)
+    if a:time
+        exe 'set updatetime=' . a:time
+    endif
+    let s:reset_updatetime = a:time
+endfunction
+
+function! s:insert_enter() " {{{
+    call s:set_term_updatetime(g:ConqueTerm_FocusedUpdateTime)
+endfunction " }}}
+
+function! s:insert_leave() " {{{
+    call s:set_term_updatetime(g:ConqueTerm_UnfocusedUpdateTime)
+endfunction " }}}
+
 " gets called when user exits conque buffer.
 " Useful for resetting changes to global config
-function! conque_term#on_blur() " {{{
+function! conque_term#on_blur(is_buffer) " {{{
     " re-enable NeoComplCache if needed
     if exists('s:NeoComplCache_WasEnabled') && exists(':NeoComplCacheUnlock') && s:NeoComplCache_WasEnabled == 2
         NeoComplCacheUnlock
@@ -1009,14 +1116,12 @@ function! conque_term#on_blur() " {{{
     endif
 
     " reset poll interval
-    if g:ConqueTerm_ReadUnfocused == 1
-        set updatetime=1000
+    if g:ConqueTerm_ReadUnfocused
+        call s:set_term_updatetime(g:ConqueTerm_UnfocusedUpdateTime)
         autocmd ConqueTerm CursorHoldI * call conque_term#read_all(1)
         autocmd ConqueTerm CursorHold * call conque_term#read_all(0)
-    elseif exists('s:save_updatetime')
+    elseif s:reset_updatetime
         exe 'set updatetime=' . s:save_updatetime
-    else
-        set updatetime=2000
     endif
 
     " call user defined functions
@@ -1026,7 +1131,9 @@ endfunction " }}}
 
 " bell event (^G)
 function! conque_term#bell() " {{{
-    echohl WarningMsg | echomsg "BELL!" | echohl None
+    if g:ConqueTerm_ShowBell
+        echohl WarningMsg | echomsg "BELL!" | echohl None
+    endif
 endfunction " }}}
 
 " register function to be called at conque events
@@ -1311,7 +1418,7 @@ endfunction " }}}
 " **** "API" functions *************************************************************************************
 " **********************************************************************************************************
 
-" See doc/conque_term.txt for full documentation {{{
+" {{{
 
 " Write to a conque terminal buffer
 function! s:term_obj.write(...) dict " {{{
@@ -1344,7 +1451,7 @@ function! s:term_obj.focus() dict " {{{
 
     let save_sb = &switchbuf
     sil set switchbuf=usetab
-    exe 'sb ' . self.buffer_name
+    exe 'sb ' . self.buffer_number
     sil exe ":set switchbuf=" . save_sb
     startinsert!
 
@@ -1353,26 +1460,33 @@ endfunction " }}}
 " read from terminal buffer and return string
 function! s:term_obj.read(...) dict " {{{
 
+    sil exe s:py . ' if not ' . self.var . '.proc.is_alive(): vim.command("call conque_term#get_instance(' . self.idx . ').close()")'
+
     let read_time = get(a:000, 0, 1)
     let update_buffer = get(a:000, 1, self.is_buffer)
 
     if update_buffer 
+        let term_win = bufwinnr(self.buffer_number)
+        if term_win == -1
+            " Don't read when the buffer window isn't visible
+            return ''
+        endif
+
+        let last_buf = bufnr("%")
+        let last_win = winnr()
+
+        " Focus to the terminal window
+        sil exe 'noautocmd ' . term_win . 'wincmd w'
+
         let up_py = 'True'
     else
         let up_py = 'False'
     endif
 
-    " figure out if we're in the buffer we're updating
-    if exists('b:ConqueTerm_Var') && b:ConqueTerm_Var == self.var
-        let in_buffer = 1
-    else
-        let in_buffer = 0
-    endif
-
     let output = ''
-
+   
     " read!
-    sil exec s:py . " conque_tmp = " . self.var . ".read(timeout = " . read_time . ", set_cursor = False, return_output = True, update_buffer = " . up_py . ")"
+    sil exec s:py . " conque_tmp = " . self.var . ".read(timeout = " . read_time . ", set_cursor = " . up_py . ", return_output = True, update_buffer = " . up_py . ")"
 
     " ftw!
     try
@@ -1381,9 +1495,19 @@ function! s:term_obj.read(...) dict " {{{
     catch
         " d'oh
     endtry
+    
+    if update_buffer
+        sil exec s:py . ' ' . self.var . '.update_window()'
 
+        if bufwinnr(last_buf) != -1 && last_buf != winbufnr(last_win)
+            sil exe 'noautocmd ' . bufwinnr(last_buf) . 'wincmd w'
+        else
+            " Usefull for ConqueGdb. Because it might open a new window after read
+            sil exe 'noautocmd ' . last_win . 'wincmd w'
+        endif
+    endif
+    
     return output
-
 endfunction " }}}
 
 " set output callback
@@ -1396,6 +1520,9 @@ endfunction " }}}
 " close subprocess with ABORT signal
 function! s:term_obj.close() dict " {{{
 
+    let last_buf = bufnr("%")
+    sil exe 'noautocmd buffer ' . self.buffer_number
+
     " kill process
     try
         sil exe s:py . ' ' . self.var . '.abort()'
@@ -1404,22 +1531,39 @@ function! s:term_obj.close() dict " {{{
     endtry
 
     " delete buffer if option is set
-    try
-        if self.is_buffer
+    if self.is_buffer
+        try
             call conque_term#set_mappings('stop')
-            if exists('g:ConqueTerm_CloseOnEnd') && g:ConqueTerm_CloseOnEnd
-                sil exe 'bwipeout! ' . self.buffer_name
-                stopinsert!
-            endif
+        catch
+        endtry
+        if exists('g:ConqueTerm_CloseOnEnd') && g:ConqueTerm_CloseOnEnd && buflisted(self.buffer_number)
+            sil exe 'bwipeout ' . self.buffer_number
+            stopinsert
         endif
-    catch
-    endtry
+    endif
 
     " mark ourselves as inactive
     let self.active = 0
 
     " rebuild session options
     let g:ConqueTerm_TerminalsString = string(g:ConqueTerm_Terminals)
+
+    " Reset update time if this is the last terminal
+    if s:term_count <= 1
+        if s:reset_updatetime
+            exe 'set updatetime=' . s:save_updatetime
+        endif
+        let s:term_count = 0
+    else
+        let s:term_count = s:term_count - 1
+    endif
+
+    " call user defined functions
+    call conque_term#call_hooks('after_close', self)
+
+    if last_buf != self.buffer_number
+        sil exe 'noautocmd buffer ' . last_buf
+    endif
 
 endfunction " }}}
 
@@ -1457,6 +1601,7 @@ function! conque_term#create_terminal_object(...) " {{{
     let l:t_obj.is_buffer = is_buffer
     let l:t_obj.idx = buf_num
     let l:t_obj.buffer_name = bname
+    let l:t_obj.buffer_number = bufnr("%")
     let l:t_obj.var = pvar
     let l:t_obj.command = command
     let l:t_obj.program_name = prg_name
@@ -1481,6 +1626,11 @@ function! conque_term#get_instance(...) " {{{
 
     return g:ConqueTerm_Terminals[buf_num]
 
+endfunction " }}}
+
+" Get python version
+function! conque_term#get_py() " {{{
+    return s:py
 endfunction " }}}
 
 " }}}

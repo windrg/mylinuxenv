@@ -1,7 +1,7 @@
-" FILE:     plugin/conque_term.vim {{{
+" FILE:     plugin/conque/conque_term.vim {{{
 " AUTHOR:   Nico Raffo <nicoraffo@gmail.com>
 " WEBSITE:  http://conque.googlecode.com
-" MODIFIED: 2011-09-02
+" MODIFIED: 2011-09-12
 " VERSION:  2.3, for Vim 7.0
 " LICENSE:
 " Conque - Vim terminal/console emulator
@@ -28,7 +28,7 @@
 " THE SOFTWARE.
 " }}}
 
-" See docs/conque_term.txt for help or type :help ConqueTerm
+" See docs/conque.txt for help or type :help ConqueTerm
 
 if exists('g:ConqueTerm_Loaded') || v:version < 700
     finish
@@ -66,6 +66,11 @@ endif " }}}
 " Using a different key will usually fix Alt/Meta key issues
 if !exists('g:ConqueTerm_EscKey')
     let g:ConqueTerm_EscKey = '<Esc>'
+endif " }}}
+
+" Key mapping to send interrupt to terminal in insert and normal mode {{{
+if !exists('g:ConqueTerm_Interrupt')
+    let g:ConqueTerm_Interrupt = '<C-c>'
 endif " }}}
 
 " Use this key to execute the current file in a split window. {{{
@@ -176,6 +181,23 @@ endif " }}}
 " Disable this feature by default, still in Beta
 if !exists('g:ConqueTerm_InsertCharPre')
     let g:ConqueTerm_InsertCharPre = 0
+endif " }}}
+
+" Don't show 'BELL!' message by default {{{
+if !exists('g:ConqueTerm_ShowBell')
+    let g:ConqueTerm_ShowBell = 0
+endif " }}}
+
+" Option to change update time when conque term is not in focus {{{
+" Zero means do not change the update time
+if !exists('g:ConqueTerm_UnfocusedUpdateTime')
+    let g:ConqueTerm_UnfocusedUpdateTime = 500
+endif " }}}
+
+" Option to change update time when conque term is in focus {{{
+" Zero means do not change the update time
+if !exists('g:ConqueTerm_FocusedUpdateTime')
+    let g:ConqueTerm_FocusedUpdateTime = 80
 endif " }}}
 
 " }}}

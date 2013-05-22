@@ -1,7 +1,7 @@
 # FILE:     autoload/conque_term/conque.py 
 # AUTHOR:   Nico Raffo <nicoraffo@gmail.com>
 # WEBSITE:  http://conque.googlecode.com
-# MODIFIED: 2011-09-02
+# MODIFIED: 2011-09-12
 # VERSION:  2.3, for Vim 7.0
 # LICENSE:
 # Conque - Vim terminal/console emulator
@@ -50,7 +50,7 @@ import re
 import math
 
 
-class Conque:
+class Conque(object):
 
     # screen object
     screen = None
@@ -161,6 +161,10 @@ class Conque:
         read -- Check program for new output when finished
 
         """
+        # check if window size has changed
+        if not CONQUE_FAST_MODE:
+            self.update_window_size()
+
         # write and read
         self.proc.write(input)
 
@@ -242,7 +246,7 @@ class Conque:
             output = self.proc.read(timeout)
 
             if output == '':
-                return
+                return output
 
             # for bufferless terminals
             if not update_buffer:
@@ -347,7 +351,7 @@ class Conque:
                 return output.encode(CONQUE_VIM_ENCODING, 'replace')
 
 
-    def auto_read(self):
+    def auto_read(self, reset_timer = True):
         """ Poll program for more output. 
 
         Since Vim doesn't have a reliable event system that can be triggered when new
@@ -359,6 +363,7 @@ class Conque:
         to execute this command, typically set to go off after 50 ms of inactivity.
 
         """
+
         # process buffered input if any
         if len(self.input_buffer):
             for chr in self.input_buffer:
@@ -366,12 +371,12 @@ class Conque:
             self.input_buffer = []
             self.read(1)
 
+        if not self.proc.is_alive():
+            vim.command('call conque_term#get_instance().close()')
+            return
+
         # check subprocess status, but not every time since it's CPU expensive
         if self.read_count % 32 == 0:
-            if not self.proc.is_alive():
-                vim.command('call conque_term#get_instance().close()')
-                return
-
             if self.read_count > 512:
                 self.read_count = 0
 
@@ -385,27 +390,24 @@ class Conque:
         # read output
         self.read(1)
 
-        # reset timer
-        if self.c == 1:
-            vim.command('call feedkeys("\<right>\<left>", "n")')
-        else:
-            vim.command('call feedkeys("\<left>\<right>", "n")')
+        if reset_timer:
+            try:
+                # reset timer
+                if self.c == vim.eval('col("$")'):
+                    vim.command('call feedkeys("\<Right>", "n")')
+                else:
+                    vim.command('call feedkeys("\<Right>\<Left>", "n")')
+            except:
+                pass
 
         # stop here if cursor doesn't need to be moved
         if self.cursor_set:
             return
 
-        # check if window size has changed
-        if not CONQUE_FAST_MODE:
-            self.update_window_size()
-
-
         # otherwise set cursor position
         try:
             self.set_cursor(self.l, self.c)
         except:
-
-
             pass
 
         self.cursor_set = True
@@ -1015,15 +1017,10 @@ class Conque:
             except:
                 pass
 
-    def update_window_size(self, force=False):
-        """ Check and save the current buffer dimensions.
-
-        If the buffer size has changed, the update_window_size() method both updates
-        the Conque buffer size attributes as well as sending the new dimensions to the
-        subprocess pty.
-
+    def update_window(self, force=False):
         """
-        # resize if needed
+        Update Conque buffer size attributes if needed.
+        """
         if force or vim.current.window.width != self.columns or vim.current.window.height != self.lines:
 
             # reset all window size attributes to default
@@ -1039,8 +1036,19 @@ class Conque:
             # reset tabstops
             self.init_tabstops()
 
+            return True
 
+        return False
 
+    def update_window_size(self, force=False):
+        """ Check and save the current buffer dimensions.
+
+        If the buffer size has changed, the update_window_size() method both updates
+        the Conque buffer size attributes as well as sending the new dimensions to the
+        subprocess pty.
+
+        """
+        if self.update_window(force):
             # signal process that screen size has changed
             self.proc.window_resize(self.lines, self.columns)
 
@@ -1072,7 +1080,7 @@ class Conque:
 
     def close(self):
         """ End the process running in the terminal. """
-        self.proc.close()
+        self.abort()
 
     def abort(self):
         """ Forcefully end the process running in the terminal. """

@@ -1,7 +1,7 @@
 # FILE:     autoload/conque_term/conque_sole.py
 # AUTHOR:   Nico Raffo <nicoraffo@gmail.com>
 # WEBSITE:  http://conque.googlecode.com
-# MODIFIED: 2011-09-02
+# MODIFIED: 2011-09-12
 # VERSION:  2.3, for Vim 7.0
 # LICENSE:
 # Conque - Vim terminal/console emulator
@@ -373,13 +373,15 @@ class ConqueSole(Conque):
 
         self.proc.write_vk(vk_code)
 
+    def update_window(self, force=False):
+        # This magically works
+        vim.command("normal! i")
 
-    def update_window_size(self):
+
+    def update_window_size(self, tell_subprocess = True):
         """ Resize underlying console if Vim buffer size has changed """
 
         if vim.current.window.width != self.columns or vim.current.window.height != self.lines:
-
-
 
             # reset all window size attributes to default
             self.columns = vim.current.window.width
@@ -387,8 +389,9 @@ class ConqueSole(Conque):
             self.working_columns = vim.current.window.width
             self.working_lines = vim.current.window.height
             self.bottom = vim.current.window.height
-
-            self.proc.window_resize(vim.current.window.height, vim.current.window.width)
+            
+            if tell_subprocess:
+                self.proc.window_resize(vim.current.window.height, vim.current.window.width)
 
 
     def set_cursor(self, line, column):

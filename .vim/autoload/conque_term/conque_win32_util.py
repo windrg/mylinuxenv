@@ -1,7 +1,7 @@
 # FILE:     autoload/conque_term/conque_win32_util.py
 # AUTHOR:   Nico Raffo <nicoraffo@gmail.com>
 # WEBSITE:  http://conque.googlecode.com
-# MODIFIED: 2011-09-02
+# MODIFIED: 2011-09-12
 # VERSION:  2.3, for Vim 7.0
 # LICENSE:
 # Conque - Vim terminal/console emulator

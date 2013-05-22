@@ -1,7 +1,7 @@
 # FILE:     autoload/conque_term/conque_subprocess.py
 # AUTHOR:   Nico Raffo <nicoraffo@gmail.com>
 # WEBSITE:  http://conque.googlecode.com
-# MODIFIED: 2011-09-02
+# MODIFIED: 2011-09-12
 # VERSION:  2.3, for Vim 7.0
 # LICENSE:
 # Conque - Vim terminal/console emulator
@@ -71,6 +71,12 @@ class ConqueSubprocess:
         executable = command_arr[0]
         args = command_arr
 
+        # Ignore SIGCHLD to release resources when chlid exits
+        try:
+            signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+        except:
+            pass
+
         # try to fork a new pty
         try:
             self.pid, self.fd = pty.fork()
@@ -81,6 +87,12 @@ class ConqueSubprocess:
 
         # child proc, replace with command after altering terminal attributes
         if self.pid == 0:
+
+            # Set SIGCHLD to default in child
+            try:
+                signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+            except:
+                pass
 
             # set requested environment variables
             for k in env.keys():

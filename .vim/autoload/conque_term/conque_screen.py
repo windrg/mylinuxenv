@@ -1,7 +1,7 @@
 # FILE:     autoload/conque_term/conque_screen.py
 # AUTHOR:   Nico Raffo <nicoraffo@gmail.com>
 # WEBSITE:  http://conque.googlecode.com
-# MODIFIED: 2011-09-02
+# MODIFIED: 2011-09-12
 # VERSION:  2.3, for Vim 7.0
 # LICENSE:
 # Conque - Vim terminal/console emulator
@@ -49,7 +49,6 @@ correct cursor position.
 """
 
 import vim
-
 
 class ConqueScreen(object):
 
@@ -221,9 +220,13 @@ class ConqueScreen(object):
 
         # align bottom of buffer to bottom of screen
         vim.command('normal! ' + str(self.screen_height) + 'kG')
+        
+        ret = buffer_line - self.screen_top
+        if ret > self.screen_height:
+            ret = self.screen_height
 
         # return new relative line number
-        return (buffer_line - self.screen_top)
+        return ret
 
 
     def align(self):

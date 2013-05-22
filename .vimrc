@@ -24,6 +24,10 @@ colo koehler
 set laststatus=2
 set statusline=%h%F%m%r%=[%l:%c(%p%%)]	
 
+" Powerline
+set encoding=utf-8 "Necessary to show Unicode glyphs
+set t_Co=256
+
 " allow backspacing over everything in insert mode
 set backspace=indent,eol,start
 
@@ -92,7 +96,6 @@ command DiffOrig vert new | set bt=nofile | r # | 0d_ | diffthis
 
 "===================== CY ===================== 
 "set ignorecase
-filetype on
 "ctags
 "set tags=/home/cysh/ws/tagtest/linux-2.6.32/tags
 "set tags=$CTAGS_DB
@@ -204,3 +207,9 @@ set noswapfile
 "tab
 map <C-O>	:tabe ./<CR>
 map <C-N>	:tabnew<CR>
+
+" ConqueGdb
+"let g:ConqueGdb_GdbExe = '/home/cy13shin/bin/abin/agdb'
+
+" DirDiff
+let g:DirDiffExcludes = "CVS,*.class,*.o,*.cmd,*.swp,*.jar"
