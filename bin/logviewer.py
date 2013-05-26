@@ -1,20 +1,5 @@
 #!/usr/bin/python
 
-'''
-        Copyright (c) 2013 Samsung Electronics Co., Ltd.
-
-        This software is licensed under the terms of the GNU General Public
-        License version 2, as published by the Free Software Foundation, and
-        may be copied, distributed, and modified under those terms.
-
-        Authors:
-            David Seunghan Kim(hyenakim@samsung.com)
-
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-'''
-
 import os, sys, re, time
 
 def usage():
