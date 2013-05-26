@@ -6,5 +6,6 @@
 #ctags -L cscope.files --sort=foldcase --tag-relative=no ./
 #echo launch the CSCOPE...!!
 #cscope -qkv -icscope.files
-make tags ARCH=arm
-make cscope ARCH=arm
+#make tags ARCH=arm
+#make cscope ARCH=arm
+make ARCH=arm tags cscope

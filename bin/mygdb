@@ -1,0 +1,38 @@
+#!/bin/sh
+
+start_time_string=$(date '+%m-%d-%y_%H%M%S')
+start_time=$(date '+%s')
+gdblogfile=$start_time_string.gdb
+
+touch $gdblogfile
+echo "***************************************************" | tee -a $gdblogfile
+echo " - Path : $(pwd)" >> $gdblogfile
+echo "***************************************************" | tee -a $gdblogfile
+echo "" | tee -a $gdblogfile
+echo "" | tee -a $gdblogfile
+
+gdb $1 | tee -a $gdblogfile
+
+end_time_string=$(date '+%m-%d-%y_%H%M%S')
+end_time=$(date '+%s')
+build_time=$(echo "$end_time-$start_time" | bc)
+
+hr=$(echo "$build_time/3600" | bc)
+min=$(echo "($build_time/60)-($hr*60)" | bc)
+sec=$(echo "$build_time -(($build_time/60)*60)" | bc)
+
+echo "" | tee -a $gdblogfile
+echo "" | tee -a $gdblogfile
+
+echo "***************************************************" | tee -a $gdblogfile
+echo "" | tee -a $gdblogfile
+echo " 		Debugging Summary " | tee -a $gdblogfile
+echo "- Start Time 	: $start_time_string" | tee -a $gdblogfile
+echo "- End Time 	: $end_time_string" | tee -a $gdblogfile
+echo "- Elapsed Time 	: $hr:$min:$sec" | tee -a $gdblogfile
+echo "- Result	: "
+echo "- Description	: "
+echo "" | tee -a $gdblogfile
+echo "***************************************************" | tee -a $gdblogfile
+
+exit

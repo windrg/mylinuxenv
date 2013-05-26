@@ -9,7 +9,7 @@
 #find ./ -name 'Makefile' >> f.txt
 
 echo finding files...
-find . -path ./out -prune -o -regex '.*\.\([chCH]\|cc\|CC\|mk\|java\|xml\|lds\|htf\|py\|sh\|aidl\|conf\|rc\|cpp\)' > ./f.txt
+find . -path ./out -prune -o -regex '.*\.\([chCH]\|cc\|CC\|mk\|java\|xml\|lds\|htf\|py\|sh\|aidl\|conf\|rc\|cpp\|prop\)' > ./f.txt
 find ./ -path ./out -prune -o -name 'Makefile' >> f.txt
 #kext ./f.txt > cscope.files
 mv ./f.txt cscope.files
@@ -18,5 +18,6 @@ ctags -L cscope.files
 cp cscope.files cscope.out
 #echo launch the CSCOPE...!!
 echo cscoping...
-cscope -bqk -f cscope.out
+#cscope -bqk -f cscope.out
+cscope -bqkc -i cscope.out
 echo done

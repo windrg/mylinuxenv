@@ -1,0 +1,12 @@
+#
+# pattern="<pattern>",fg=<color>,bg=<color>,br=<bool>,bo=<bool>,un=<bool>,re=<bool>
+#     <color> = 0..7, BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+#               0: BLACK, 1: RED,     2: GREEN, 3: YELLOW
+#               4: BLUE,  5: MAGENTA, 6: CYAN,  7: WHITE
+#     <bool>  = 0, 1, true, false, TRUE, FALSE
+#               0: false, FALSE
+#               1: true, TRUE
+pattern = "error :, "" , fg = YELLOW, bg= RED, bo =true
+pattern="error:",fg=YELLOW,bg=RED,bo=true
+pattern = "ieee80211 : , "",fg=RED,bg=YELLOW,bo=true
+

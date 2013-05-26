@@ -1,36 +1,154 @@
-#!/bin/sh
-# show distcc stat
-distccmon-gnome &
+#!/bin/bash
 
-start_time_string=$(date '+%m-%d-%y_%H:%M:%S')
-start_time=$(date '+%s')
-logfile=build_$start_time_string.log
+CPU_JOB_NUM=$(grep processor /proc/cpuinfo | awk '{field=$NF};END{print field+1}')
+CLIENT=$(whoami)
 
+ROOT_DIR=$(pwd)
 
-# main build command
-#KBUILD_VERBOSE=1 MAKEFLAGS="CC=distcc gcc" fakeroot make-kpkg --initrd --stem linux --revision=20121119cykernel kernel_image kernel_headers 2>&1 | tee $logfile
-KBUILD_VERBOSE=1 MAKEFLAGS="HOSTCC=/usr/bin/gcc CCACHE_PREFIX=distcc" fakeroot make-kpkg --initrd --stem linux --revision=20121119cykernel kernel_image kernel_headers 2>&1 | tee $logfile
-#KBUILD_VERBOSE=1 fakeroot make-kpkg --initrd --stem linux --revision=20121119cykernel kernel_image kernel_headers 2>&1 | tee $logfile
-#KBUILD_VERBOSE=1 MAKEFLAGS="CC=distcc gcc" fakeroot make-kpkg --initrd --stem linux --revision=20121119cykernel kernel_image kernel_headers 2>&1 | tee $logfile
+if [ $# -lt 1 ]
+then
+	echo "Usage: ./build.sh <PRODUCT> [ kernel | platform | all ]"
+	exit 0
+fi
 
-end_time_string=$(date '+%m-%d-%y_%H:%M:%S')
-end_time=$(date '+%s')
-build_time=$(echo "$end_time-$start_time" | bc)
+if [ ! -f device/samsung/$1/build-info.sh ]
+then
+	echo "NO PRODUCT to build!!"
+	exit 0
+fi
 
-hr=$(echo "$build_time/3600" | bc)
-min=$(echo "($build_time/60)-($hr*60)" | bc)
-sec=$(echo "$build_time -(($build_time/60)*60)" | bc)
+source device/samsung/$1/build-info.sh
+BUILD_OPTION=$2
 
-echo "" | tee -a $logfile
-echo "" | tee -a $logfile
+OUT_DIR="$ROOT_DIR/out/target/product/$PRODUCT_BOARD"
+OUT_HOSTBIN_DIR="$ROOT_DIR/out/host/linux-x86/bin"
+KERNEL_CROSS_COMPILE_PATH="$ROOT_DIR/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-"
 
-echo "***************************************************" | tee -a $logfile
-echo "" | tee -a $logfile
-echo " 		Build Summary " | tee -a $logfile
-echo "- Start Time 	: $start_time_string" | tee -a $logfile
-echo "- End Time 	: $end_time_string" | tee -a $logfile
-echo "- Elapsed Time 	: $hr:$min:$sec" | tee -a $logfile
-echo "" | tee -a $logfile
-echo "***************************************************" | tee -a $logfile
+function check_exit()
+{
+	if [ $? != 0 ]
+	then
+		exit $?
+	fi
+}
 
-exit
+function build_kernel()
+{
+	echo
+	echo '[[[[[[[ Build android kernel ]]]]]]]'
+	echo
+
+	START_TIME=`date +%s`
+	pushd $KERNEL_DIR
+	echo "set defconfig for $PRODUCT_BOARD"
+	echo
+	make ARCH=arm $PRODUCT_BOARD"_defconfig"
+	check_exit
+	echo "make"
+	echo
+	#make -j$CPU_JOB_NUM > /dev/null ARCH=arm CROSS_COMPILE=$KERNEL_CROSS_COMPILE_PATH
+	#cysh
+	make -j$CPU_JOB_NUM V=1 ARCH=arm CROSS_COMPILE=$KERNEL_CROSS_COMPILE_PATH
+
+	check_exit
+	END_TIME=`date +%s`
+
+	let "ELAPSED_TIME=$END_TIME-$START_TIME"
+	echo "Total compile time is $ELAPSED_TIME seconds"
+
+	popd
+}
+
+function build_android()
+{
+        echo
+        echo '[[[[[[[ Build android platform ]]]]]]]'
+        echo
+
+        START_TIME=`date +%s`
+        echo "source build/envsetup.sh"
+        source build/envsetup.sh
+        echo
+        echo "lunch full_$PRODUCT_BOARD-eng"
+        lunch full_$PRODUCT_BOARD-eng
+        echo
+        echo "make -j$CPU_JOB_NUM"
+        echo
+        #make -j$CPU_JOB_NUM
+	#cysh
+        make -j$CPU_JOB_NUM showcommands
+        check_exit
+
+        END_TIME=`date +%s`
+        let "ELAPSED_TIME=$END_TIME-$START_TIME"
+        echo "Total compile time is $ELAPSED_TIME seconds"
+}
+
+function make_uboot_img()
+{
+	pushd $OUT_DIR
+
+	echo
+	echo '[[[[[[[ Make ramdisk image for u-boot ]]]]]]]'
+	echo
+
+	mkimage -A arm -O linux -T ramdisk -C none -a 0x40800000 -n "ramdisk" -d ramdisk.img ramdisk-uboot.img
+	check_exit
+
+	rm -f ramdisk.img
+
+	echo
+	popd
+}
+
+function make_fastboot_img()
+{
+	echo
+	echo '[[[[[[[ Make additional images for fastboot ]]]]]]]'
+	echo
+
+	if [ ! -f $KERNEL_DIR/arch/arm/boot/zImage ]
+	then
+		echo "No zImage is found at $KERNEL_DIR/arch/arm/boot"
+		echo
+		return
+	fi
+
+	echo 'boot.img ->' $OUT_DIR
+	cp $KERNEL_DIR/arch/arm/boot/zImage $OUT_DIR/zImage
+	$OUT_HOSTBIN_DIR/mkbootimg --kernel $OUT_DIR/zImage --ramdisk $OUT_DIR/ramdisk.img -o $OUT_DIR/boot.img
+	check_exit
+
+	echo 'update.zip ->' $OUT_DIR
+	zip -j $OUT_DIR/update.zip $OUT_DIR/android-info.txt $OUT_DIR/boot.img $OUT_DIR/system.img
+	check_exit
+
+	echo
+}
+
+echo
+echo '                Build android for '$PRODUCT_BOARD''
+echo
+
+case "$BUILD_OPTION" in
+	kernel)
+		build_kernel
+		;;
+	platform)
+		build_android
+		make_fastboot_img
+		;;
+	all)
+		build_kernel
+		build_android
+		make_fastboot_img
+		;;
+	*)
+		build_android
+		make_fastboot_img
+		;;
+esac
+
+echo ok success !!!
+
+exit 0

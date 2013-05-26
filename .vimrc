@@ -24,9 +24,6 @@ colo koehler
 set laststatus=2
 set statusline=%h%F%m%r%=[%l:%c(%p%%)]	
 
-" Powerline
-set encoding=utf-8 "Necessary to show Unicode glyphs
-set t_Co=256
 
 " allow backspacing over everything in insert mode
 set backspace=indent,eol,start
@@ -49,6 +46,12 @@ map Q gq
 
 " In many terminal emulators the mouse works just fine, thus enable it.
 set mouse=a
+
+" Powerline
+set encoding=utf-8 "Necessary to show Unicode glyphs
+set t_Co=256
+let g:Powerline_cache_dir = '/tmp'
+
 
 " Switch syntax highlighting on, when the terminal has colors
 " Also switch on highlighting the last used search pattern.
@@ -171,7 +174,7 @@ endfunc
 nmap ,cf :call Csf()<cr>
 
 " 1st fn key block
-"map <F2> :qa!<CR>
+map <F2> :ConqueGdb<CR>
 nnoremap <silent> <F3> :tabn<CR>
 map <F4> <C-W><C-W>
 
@@ -212,4 +215,17 @@ map <C-N>	:tabnew<CR>
 "let g:ConqueGdb_GdbExe = '/home/cy13shin/bin/abin/agdb'
 
 " DirDiff
-let g:DirDiffExcludes = "CVS,*.class,*.o,*.cmd,*.swp,*.jar"
+let g:DirDiffExcludes = "CVS,*.class,*.o,*.cmd,*.swp,*.jar,vmlinux,*.dex,*.out,tags,cscope.files"
+
+" diff colors
+"highlight DiffAdd cterm=none ctermfg=bg ctermbg=Green gui=none guifg=bg guibg=Green
+"highlight DiffDelete cterm=none ctermfg=bg ctermbg=Red gui=none guifg=bg guibg=Red
+"highlight DiffChange cterm=none ctermfg=bg ctermbg=Yellow gui=none guifg=bg guibg=Yellow
+"highlight DiffText cterm=none ctermfg=bg ctermbg=Magenta gui=none guifg=bg guibg=Magenta
+highlight! link DiffText MatchParen
+
+"listchars
+"shortcut to rapidly toggle `set list`
+"nmap <leader>l :set list!<CR>
+" Use the same symbols as TextMate for tabstops and EOLs
+set listchars=tab:▸\ ,eol:¬

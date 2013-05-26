@@ -85,10 +85,14 @@ fi
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
+alias v='vim'
+alias his='history'
 alias ws='cd /home/cysh/ws'
 alias cyvil='cd /home/cysh/cyvil'
 alias gcom='gnome-commander'
+alias cs='cscope' 
 alias csd='cscope -d'
+alias hosts='cat /etc/hosts'
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert

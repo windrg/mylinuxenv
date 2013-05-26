@@ -1,0 +1,22 @@
+127.0.0.1	localhost
+127.0.1.1	q330
+10.90.36.149    cse149 # cy13/1, CSE-NFC, in 24th floor, R3, cy13/1
+#10.90.5.74    cyp510 # CY's laptop
+10.254.220.185    cyp510 # CY's laptop
+#10.90.6.71	cse71 # cse/channel, Hyena's laptop
+10.254.220.187   cse187 # cse/channel, Hyena's laptop
+12.23.119.200	swsol # cy13.shin/<not granted>, SW Sol's git in TN, cy13.shin
+106.110.13.108  scscgit # cyshin1/Samsung1, SCSC git in Denmark, cyshin1/Samsung1
+106.1.227.26	wiki
+106.1.226.18	bugdb
+106.1.226.5	cognidox
+106.110.12.117  jenkins #cyshin/cse1234
+106.1.227.46 	scscgerrit # port:8080 login/passwd???
+
+
+# The following lines are desirable for IPv6 capable hosts
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+android_root_path=$(pwd)
+kernel_root_path=$android_root_path/kernel/samsung/shannon222ap-tn
+amber_path=$android_root_path/hardware/samsung_slsi/scsc_wifibt
+
+
+alias aroot='cd $android_root_path'
+alias kroot='cd $kernel_root_path'
+alias amber='cd $amber_path'
