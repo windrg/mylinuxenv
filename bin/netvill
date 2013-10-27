@@ -1,0 +1,29 @@
+#!/bin/sh
+mkdir /home/cy13shin/myvill
+
+echo "connect to cse41 !!!"
+mkdir /home/cy13shin/myvill/cse41
+sshfs cy13@cse41:/home/cy13 /home/cy13shin/myvill/cse41
+
+echo "connect to freesia !!!"
+mkdir /home/cy13shin/myvill/freesia
+sshfs cy13shin@freesia:/media/Users/home/cy13shin /home/cy13shin/myvill/freesia
+
+echo "connect to ishtar !!!"
+mkdir /home/cy13shin/myvill/ishtar
+sshfs buckery@10.253.97.45:/home/buckery /home/cy13shin/myvill/ishtar
+
+echo "connect to p510 !!!"
+mkdir /home/cy13shin/myvill/p510
+sudo mount -t cifs -o user='Administrator',password='shotfire',uid='1000',gid='1000' //10.253.27.73/sharewithq330 /home/cy13shin/myvill/p510
+
+echo "connect to pemirror !!!"
+mkdir /home/cy13shin/myvill/pemirror
+sshfs cy13shin@pemirror:/home/cy13shin /home/cy13shin/myvill/pemirror
+
+#echo "link to home!!!"
+#ln -s /home/cy13shin/myvill /home/cy13shin/myvill
+
+echo " *** RESULT *** "
+df -h
+ls -al ~/myvill

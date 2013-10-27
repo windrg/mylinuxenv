@@ -1,0 +1,24 @@
+#!/bin/sh  
+
+reo ./kernel/samsung/shannon222ap-tn/ > /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/compat-wireless_intermediates/ >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/uf6k_debug_intermediates/ >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/hydra_generic_intermediates/ >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/sdioemb_debug_intermediates/ >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/oska_debug_intermediates/ >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/libwpa_client_intermediates/ >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/EXECUTABLES/wpa_cli_intermediates >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/EXECUTABLES/hostapd_cli_intermediates >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/EXECUTABLES/hostapd_intermediates >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/EXECUTABLES/wpa_supplicant_intermediates >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/libbluedroid_intermediates >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/EXECUTABLES/bdt_intermediates/ >> /tmp/temp
+reo ./out/target/product/universal_eur/obj/SHARED_LIBRARIES/libbluetooth_jni_intermediates >> /tmp/tmp
+
+sort -u /tmp/temp > cscope.files
+cp /tmp/temp cscope.out
+rm /tmp/temp
+
+ctags --tag-relative=no -L cscope.files
+cscope -f cscope.out
+

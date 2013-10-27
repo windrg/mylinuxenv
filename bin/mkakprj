@@ -14,10 +14,11 @@ find ./ -path ./out -prune -o -name 'Makefile' >> f.txt
 #kext ./f.txt > cscope.files
 mv ./f.txt cscope.files
 echo ctagging...
-ctags -L cscope.files
+ctags --tag-relative=no -L cscope.files
 cp cscope.files cscope.out
 #echo launch the CSCOPE...!!
 echo cscoping...
 #cscope -bqk -f cscope.out
-cscope -bqkc -i cscope.out
+#cscope -bqkc -i cscope.out
+cscope -f cscope.out
 echo done

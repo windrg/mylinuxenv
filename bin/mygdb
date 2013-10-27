@@ -11,7 +11,11 @@ echo "***************************************************" | tee -a $gdblogfile
 echo "" | tee -a $gdblogfile
 echo "" | tee -a $gdblogfile
 
-gdb $1 | tee -a $gdblogfile
+echo "------------- SERIAL INFO ------------ " | tee -a $gdblogfile
+echo "$(stty -F /dev/ttyUSB0)" | tee -a $gdblogfile
+echo "--------------------------------------" | tee -a $gdblogfile
+
+agdb $1 | tee -a $gdblogfile
 
 end_time_string=$(date '+%m-%d-%y_%H%M%S')
 end_time=$(date '+%s')

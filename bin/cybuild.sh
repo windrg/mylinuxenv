@@ -4,10 +4,10 @@ start_time=$(date '+%s')
 logfile=build_$start_time_string.log
 
 #ccache
-./prebuilts/misc/linux-x86/ccache/ccache -M 50G
+#./prebuilts/misc/linux-x86/ccache/ccache -M 50G
 
 # main build command
-./build.sh universal_ss222ap all 2>&1 | tee $logfile
+./build.sh universal_eur all 2>&1 | tee $logfile
 
 end_time_string=$(date '+%m-%d-%y_%H:%M:%S')
 end_time=$(date '+%s')
@@ -30,7 +30,7 @@ echo "" | tee -a $logfile
 echo "***************************************************" | tee -a $logfile
 rm ./kernel/samsung/shannon222ap-tn/vmlinux.c
 aobjdump -Sdlx ./kernel/samsung/shannon222ap-tn/vmlinux > ./kernel/samsung/shannon222ap-tn/vmlinux.c &
-ls -al ./out/target/product/universal_ss222ap/
+ls -al ./out/target/product/universal_eur
 echo "***************************************************" | tee -a $logfile
 
 exit

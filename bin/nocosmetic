@@ -1,0 +1,3 @@
+#!/bin/sh
+# strip the ANSI colour codes and make it plain texts
+cat $1 | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g"

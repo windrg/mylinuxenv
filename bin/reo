@@ -1,0 +1,321 @@
+#!/usr/bin/python
+#logtrans.py
+
+import sys
+import os
+import re
+
+debug = 0
+
+if debug == 1:
+	import pdb
+
+target_path = ""
+root_path = ""
+
+def usage():
+	print("Usage : reo <target path> <root path>")
+
+
+def search(dirname):
+	flist = os.listdir(dirname)
+	for f in flist:
+		next = os.path.join(dirname, f)
+		if os.path.isdir(next):
+			search(next)
+		else:
+			doFileWork(next)
+
+def doFileWork(filename):
+	ext = os.path.splitext(filename)[-1]
+	if ext == '.o': print(filename)
+
+#def object2source(filename)
+	
+
+
+def findfiles(root, ext):
+	result = []
+	for (path, dir, files) in os.walk(root):
+		for filename in files:
+			if os.path.splitext(filename)[-1] == ext:
+				if path[-1] == '/':
+					tmp = path + filename
+				else:
+					tmp = path + '/' + filename
+				#if debug == 1 :
+					#print(tmp)
+				result.append( tmp )
+	return result
+
+
+delimiter = re.compile(' |\\|\(|\)|\\n')
+
+blacklisted_files = []
+
+def trans_path(path, rpath):
+	if os.path.islink(path) == True:
+		ret_path = os.path.relpath( os.path.realpath(path), rpath )
+	else:
+		ret_path = os.path.relpath( path )
+	return ret_path
+
+def refine_path(path, tpath, rpath): 
+	ret_path = ""
+
+	if path[0:4] == "/usr":
+		return path
+		
+	if os.path.exists(path) == True:
+		ret_path = trans_path(path, rpath)
+	else:
+		#re-evaluate w/ tpath
+		if path.find(tpath) < 0 :
+			if tpath[-1] == '/':
+				tmp = tpath + path
+			else:
+				tmp = tpath + '/' + path
+		else:
+			tmp = path
+
+		#if os.path.exists(tmp) == True: 
+			#if os.path.getsize(tmp) == 0:
+					#print("size is 0 : %s " % tmp)
+
+		if os.path.exists(tmp) == True and os.path.getsize(tmp) > 0:
+			ret_path = trans_path(tmp, rpath)
+		else: 
+			if 1 == debug:
+				print("refine_path:couldn't find : %s " % tmp)
+
+
+	return ret_path
+
+	#ret = ""
+	#if path[0] == '/':
+		#ret = path
+	#elif path[0:2] == "./":
+		#if "." == interim_path:
+			#ret = path
+		#else:
+			#ret = interim_path + "/" + path[1:]
+	#else:
+		#ret = interim_path + path
+	#return ret
+
+	#if os.path.isfile(os.path.abspath(ret)) == True:
+		#if 1 == debug:
+			#print("     REFINED : %s" % ret)	
+		#return ret
+	#else:
+		#if 1 == debug:
+			#blacklisted_files.append(path) # just to list up and save in this file
+		#return ""
+
+
+extention = re.compile('\.[c|cpp|h|hpp|S]$')
+def extract_path(line, tpath, rpath):
+	tmp = delimiter.split(line)
+	for tmp_path in tmp:
+		if None == extention.search( tmp_path ):
+			found = ""
+			continue
+		else:
+			found = tmp_path
+			break
+
+	if found != "":
+		return refine_path(found, tpath, rpath)
+	else:
+		return ""
+
+headers = []
+def extract_headers(cmdfile, tpath, rpath):
+	oldcnt = len(headers) 
+	while 1:
+		line = cmdfile.readline()
+		if not line: break
+		if line.find( "$(deps_" ) >= 0:
+			break
+		if line.find( "deps_" ) >= 0:
+			in_headers = 1
+			while in_headers:
+				line = cmdfile.readline()
+				if not line: break
+				if line.find( "$(deps_" ) >= 0:
+					break
+				tmp = extract_path(line, tpath, rpath)
+				if tmp == "":
+					continue	
+
+				if headers.count(tmp) == 0:
+					headers.append(tmp)
+					if 1 == debug:
+						print("     +++ %s " % tmp)
+				else:
+					continue
+
+	return (len(headers) - oldcnt)
+
+sources_from_P = []
+def extract_sources_from_Pfile(pfile, tpath, rpath):
+	oldcnt = len(sources_from_P) 
+	while 1:
+		line = pfile.readline()
+		if not line: break
+		if line.find( ".o:" ) >= 0:
+			continue;
+		else:
+			in_headers = 1
+			while in_headers:
+				line = pfile.readline()
+				if not line: break
+				tmp = extract_path(line, tpath, rpath)
+				if tmp == "":
+					continue	
+
+				if sources_from_P.count(tmp) == 0:
+					sources_from_P.append(tmp)
+					if 1 == debug:
+						print("     +++ %s " % tmp)
+				else:
+					continue
+
+	return (len(sources_from_P) - oldcnt)
+
+def is_valid_path(path):
+	if os.path.isdir(path) == True and os.path.lexists(path):
+		return True
+	else:
+		return False
+	
+def sortout_blacklist(files):
+	for file in files:
+		if os.path.exists(file) == False:
+				print("!!!! BLACK : %s" % file)	
+
+
+def main(orig_args):
+	argc = 	len(orig_args)
+	if argc == 0:
+		target_path = root_path = "."
+	elif argc == 1:
+		target_path = orig_args[0]
+		root_path = "."
+	elif argc == 2:
+		target_path = orig_args[0]
+		root_path = orig_args[1]
+	else:
+		usage()
+		sys.exit(2)
+
+	if False == is_valid_path(target_path):
+		print("arg #1, target_path is invalid")
+		sys.exit(2)
+
+	if False == is_valid_path(root_path):
+		print("arg #2, root_path is invalid")
+		sys.exit(2)
+
+	interim_path = os.path.relpath(target_path, root_path)
+
+	#1 find objs and change them 2 source
+        if debug == 1: 
+		print("finding *.o files...")
+
+	objs = findfiles(target_path, '.o')
+	srcs = []
+	for filename in objs:
+		tmp_filename = refine_path( filename[0:-1] + 'c' ,  target_path, root_path)
+		if "" != tmp_filename and os.path.getsize(tmp_filename) > 0:
+			srcs.append( tmp_filename )
+		
+        if debug == 1: 
+		print("** srcs : %d files found" % len(srcs))
+
+	#2 find cmds and 
+	# a. open and extract headerfiles
+        if debug == 1: 
+		print("finding *.cmd files...");
+	cmds = findfiles(target_path, '.cmd')
+	#print(cmds)
+        if debug == 1: 
+		print("    ==> cmds : %d cmd files found" % len(cmds) )
+		print("extracing header files...")
+	for file in cmds:
+		if debug == 1: 
+			print("--- START : %s" % file )
+
+		if "auto.conf.cmd" == os.path.basename(file):
+			continue
+
+		if os.path.getsize(file) <= 0:
+			continue
+
+		try: f = open(file, 'r')
+		except: 
+			print("!!! couldn't open %s !!!" % file)
+			sys.exit(2)
+		added = extract_headers(f, target_path, root_path)
+		if debug == 1: 
+			print("--- END : %s %d added(total : %d)" % (file, added, len(headers)) )
+		f.close()
+
+	if debug == 1: 
+		print("** headers : %d files found" % len(headers) )
+
+ 	#3 find .P files and	
+	# a. open and extract headerfiles
+        if debug == 1: 
+		print("finding *.P files...");
+	deps = findfiles(target_path, '.P')
+	#print(deps)
+        if debug == 1: 
+		print("    ==> deps(*.P) : %d *.P files found" % len(deps) )
+		print("extracing header files...")
+	for file in deps:
+		if debug == 1: 
+			print("--- START : %s" % file )
+
+		if "auto.conf.cmd" == os.path.basename(file):
+			continue
+
+		if os.path.getsize(file) <= 0:
+			continue
+		
+		try: f = open(file, 'r')
+		except: 
+			print("!!! couldn't open %s !!!" % file)
+			sys.exit(2)
+		added = extract_sources_from_Pfile(f, target_path, root_path)
+		if debug == 1: 
+			print("--- END : %s %d added(total : %d)" % (file, added, len(sources_from_P)) )
+		f.close()
+
+	
+	###################### FINALIZE #################################
+	files = srcs + headers + sources_from_P
+
+        if debug == 1: 
+		print(" *** files : %d(= src %d + headers %d + sources from P %d)" % (len(files), len(srcs), len(headers), len(sources_from_P)) )
+
+	# Addtional for instance "include/config/auto.conf"??
+	# or exception
+
+	files.sort()	
+
+	for file in files:
+		print(file)
+		
+	#sortout_blacklist(files)
+
+	#file = []
+	#if 1 == debug:
+		#print(" *** BLACKLIST START *** ")
+		#for file in blacklisted_files:
+			#print(file)
+		#print(" *** BLACKLIST END *** ")
+		
+
+if __name__=='__main__':
+	main(sys.argv[1:])

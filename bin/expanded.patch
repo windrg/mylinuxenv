@@ -1,0 +1,131 @@
+--- /home/cy13shin/ws/14_dbg/kernel/samsung/shannon222ap-tn/Makefile	2013-06-14 10:13:27.796366103 +0900
++++ ./kernel/samsung/shannon222ap-tn/Makefile	2013-06-18 12:02:53.626871039 +0900
+@@ -564,6 +564,9 @@
+ KBUILD_CFLAGS	+= -O2
+ endif
+ 
++#cysh
++KBUILD_CFLAGS	+= -D__CY_EXPANDED_LOG__ 
++
+ include $(srctree)/arch/$(SRCARCH)/Makefile
+ 
+ ifneq ($(CONFIG_FRAME_WARN),0)
+--- /home/cy13shin/ws/14_dbg/kernel/samsung/shannon222ap-tn/include/linux/printk.h	2013-06-14 10:15:44.312359634 +0900
++++ ./kernel/samsung/shannon222ap-tn/include/linux/printk.h	2013-06-18 14:03:42.982527567 +0900
+@@ -6,6 +6,25 @@
+ extern const char linux_banner[];
+ extern const char linux_proc_banner[];
+ 
++// cysh
++#ifdef __CY_EXPANDED_LOG__ 
++// cysh make my own for quickref
++#define replace_w_(p) #p
++#define expansion_(a) replace_w_(a)
++#define linenum_to_string() expansion_(__LINE__)
++#define KERN_EMERG      __FILE__ "|" linenum_to_string() "| <0>"
++#define KERN_ALERT      __FILE__ "|" linenum_to_string() "| <1>"
++#define KERN_CRIT       __FILE__ "|" linenum_to_string() "| <2>"
++#define KERN_ERR        __FILE__ "|" linenum_to_string() "| <3>"
++#define KERN_WARNING    __FILE__ "|" linenum_to_string() "| <4>"
++#define KERN_NOTICE     __FILE__ "|" linenum_to_string() "| <5>"
++#define KERN_INFO       __FILE__ "|" linenum_to_string() "| <6>"
++#define KERN_DEBUG      __FILE__ "|" linenum_to_string() "| <7>"
++#define KERN_DEFAULT	__FILE__ "|" linenum_to_string() "| <d>"
++#define KERN_CONT	__FILE__ "|" linenum_to_string() "| <c>"
++
++#else // __CY_EXPANDED_LOG__ 
++
+ #define KERN_EMERG	"<0>"	/* system is unusable			*/
+ #define KERN_ALERT	"<1>"	/* action must be taken immediately	*/
+ #define KERN_CRIT	"<2>"	/* critical conditions			*/
+@@ -24,6 +43,8 @@
+  */
+ #define KERN_CONT	"<c>"
+ 
++#endif // __CY_EXPANDED_LOG__ 
++
+ extern int console_printk[];
+ 
+ #define console_loglevel (console_printk[0])
+--- /home/cy13shin/ws/18/hardware/samsung_slsi/scsc_wifibt/s5n2230/kernel/wlan/debug.h	2013-06-18 21:55:37.081186052 +0900
++++ ./hardware/samsung_slsi/scsc_wifibt/s5n2230/kernel/wlan/debug.h	2013-06-19 15:08:13.402250578 +0900
+@@ -12,6 +12,7 @@
+ #include "hip_defs.h"
+ #include "hip_card_sdio.h"
+ 
++
+ /*
+  * Logging modules
+  * =======================
+@@ -104,6 +105,55 @@
+ #define UF6K_EWI_DEV(ufdev) (((ufdev) && ((ufdev)->hw) && ((ufdev)->hw->wiphy)) ? &((ufdev)->hw->wiphy->dev) : NULL)
+ #endif
+ 
++
++// cysh
++#ifdef  __CY_EXPANDED_LOG__
++#define UF6K_EWI(output, ufdev, label, fmt, arg ...) \
++	do { \
++		if ( !strcmp("E", label) ) \
++			printk(KERN_ERR label "%s: %s " fmt, dev_driver_string(UF6K_EWI_DEV(ufdev)), __func__, ## arg); \
++		else if ( !strcmp("W", label) ) \
++			printk(KERN_WARNING label "%s: %s " fmt, dev_driver_string(UF6K_EWI_DEV(ufdev)), __func__, ## arg); \
++		else if ( !strcmp("I", label) ) \
++			printk(KERN_INFO label "%s: %s " fmt, dev_driver_string(UF6K_EWI_DEV(ufdev)), __func__, ## arg); \
++		else \
++			printk(KERN_DEFAULT label "%s: %s " fmt, dev_driver_string(UF6K_EWI_DEV(ufdev)), __func__, ## arg); \
++	} while(0)
++
++#define UF6K_EWI_NODEV(output, label, fmt, arg ...) \
++	do { \
++		if ( !strcmp("E", label) ) \
++			printk(KERN_ERR label "%s: %s " fmt, UF6K_EWI_NODEV_LABEL,__func__, ## arg); \
++		else if ( !strcmp("W", label) ) \
++			printk(KERN_WARNING label "%s: %s " fmt, UF6K_EWI_NODEV_LABEL,__func__, ## arg); \
++		else if ( !strcmp("I", label) ) \
++			printk(KERN_INFO label "%s: %s " fmt, UF6K_EWI_NODEV_LABEL,__func__, ## arg); \
++		else \
++			printk(KERN_DEFAULT label "%s: %s " fmt, UF6K_EWI_NODEV_LABEL, __func__, ## arg); \
++	} while(0)
++
++#define UF6K_EWI_HEX(output, klevel, ufdev, label, p, len, fmt, arg ...) \
++	do { \
++		UF6K_EWI(output, ufdev, label, fmt, ## arg); \
++		print_hex_dump(klevel, "", DUMP_PREFIX_OFFSET, 16, 1, p, len, 0); \
++	} while (0)
++
++#define UF6K_EWI_HEX_NODEV(output, klevel, label, p, len, fmt, arg ...) \
++	do { \
++		UF6K_EWI_NODEV(output, label, fmt, ## arg); \
++		print_hex_dump(klevel, "", DUMP_PREFIX_OFFSET, 16, 1, p, len, 0);  \
++	} while (0)
++
++#define UF6K_ERR(ufdev, fmt, arg ...)   do { printk(KERN_ERR "%s" fmt, dev_driver_string(UF6K_EWI_DEV(ufdev)), ## arg); } while (0)
++#define UF6K_WARN(ufdev, fmt, arg ...)  do { printk(KERN_WARNING "%s" fmt, dev_driver_string(UF6K_EWI_DEV(ufdev)), ## arg); } while (0)
++#define UF6K_INFO(ufdev, fmt, arg ...)  do { printk(KERN_INFO "%s" fmt, dev_driver_string(UF6K_EWI_DEV(ufdev)), ## arg); } while (0) 
++
++#define UF6K_ERR_NODEV(fmt, arg ...)                 printk(KERN_ERR fmt, ## arg)
++#define UF6K_WARN_NODEV(fmt, arg ...)                printk(KERN_WARNING fmt, ## arg)
++#define UF6K_INFO_NODEV(fmt, arg ...)                printk(KERN_INFO fmt, ## arg)
++
++#else //  __CY_EXPANDED_LOG__
++
+ #define UF6K_EWI(output, ufdev, label, fmt, arg ...) output(UF6K_EWI_DEV(ufdev), label ": %s: " fmt, __func__, ## arg)
+ #define UF6K_EWI_NODEV(output, label, fmt, arg ...)  output(UF6K_EWI_NODEV_LABEL label ": %s: " fmt, __func__, ## arg)
+ 
+@@ -118,7 +168,6 @@
+ 		UF6K_EWI_NODEV(output, label, fmt, ## arg); \
+ 		print_hex_dump(klevel, "", DUMP_PREFIX_OFFSET, 16, 1, p, len, 0);  \
+ 	} while (0)
+-
+ #define UF6K_ERR(ufdev, fmt, arg ...)                UF6K_EWI(dev_err, ufdev,  "E", fmt, ## arg)
+ #define UF6K_WARN(ufdev, fmt, arg ...)               UF6K_EWI(dev_warn, ufdev, "W", fmt, ## arg)
+ #define UF6K_INFO(ufdev, fmt, arg ...)               UF6K_EWI(dev_info, ufdev, "I", fmt, ## arg)
+@@ -126,6 +175,7 @@
+ #define UF6K_ERR_NODEV(fmt, arg ...)                 UF6K_EWI_NODEV(pr_err,  "E", fmt, ## arg)
+ #define UF6K_WARN_NODEV(fmt, arg ...)                UF6K_EWI_NODEV(pr_warn, "W", fmt, ## arg)
+ #define UF6K_INFO_NODEV(fmt, arg ...)                UF6K_EWI_NODEV(pr_info, "I", fmt, ## arg)
++#endif  //  __CY_EXPANDED_LOG__
+ 
+ #define UF6K_ERR_HEX(ufdev, p, len, fmt, arg ...)    UF6K_EWI_HEX(dev_err,  KERN_ERR, ufdev,  "E", p, len, fmt, ## arg)
+ #define UF6K_WARN_HEX(ufdev, p, len, fmt, arg ...)   UF6K_EWI_HEX(dev_warn, KERN_WARN, ufdev, "W", p, len, fmt, ## arg)

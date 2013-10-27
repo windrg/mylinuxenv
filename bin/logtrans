@@ -1,0 +1,204 @@
+#!/usr/bin/python
+#logtrans.py
+
+import re
+import sys
+import os
+
+debug = 0
+
+if debug == 1:
+	import pdb
+
+delimiter = re.compile('\\||\[|\]|<|>') 
+root_path = ""
+path_to_logfile = ""
+postfix_to_kernel = "kernel/samsung/shannon222ap-tn"
+
+def is_valid_path(path):
+	if os.path.isdir(path) == True and os.path.lexists(path):
+		return True
+	else:
+		return False
+
+def trans_path(path, rpath):
+	if os.path.islink(path) == True:
+		ret_path = os.path.relpath( os.path.realpath(path), rpath )
+	else:
+		ret_path = os.path.relpath( path )
+	return ret_path
+
+def refine_path(path, tpath, rpath): 
+	ret_path = ""
+
+	if path[0:4] == "/usr":
+		return path
+		
+	if os.path.exists(path) == True:
+		ret_path = trans_path(path, rpath)
+	else:
+		#re-evaluate w/ tpath
+		if path.find(tpath) < 0 :
+			if tpath[-1] == '/':
+				tmp = tpath + path
+			else:
+				tmp = tpath + '/' + path
+		else:
+			tmp = path
+
+		if os.path.exists(tmp) == True:
+			ret_path = trans_path(tmp, rpath)
+		else: 
+			if 1 == debug:
+				print("refine_path:couldn't find : %s " % tmp)
+
+	return ret_path
+
+outfmt_delimiter = re.compile('TT|LL|MM|FF|NN')
+
+class LogMessage:
+	timestamp 	= "<none>" # TT
+	level 		= "<none>" # LL
+	message 	= "<none>" # MM
+	filename 	= "<none>" # FF
+	linenum 	= "<none>" # NN
+
+	def parse(self, msg):
+		#parsed = msg.split(delimiter, 5)
+		#parsed = re.split(" \|[|]", msg); 
+		if msg[0] != '[' and msg[0] !='<':
+			self.message = msg
+			self.filename = self.linenum = self.level = self.timestamp = "<not found>"
+			return
+
+		if msg[0] != '[' and msg[0] =='<':
+			msg = msg[3:]
+
+		parsed = delimiter.split(msg)
+
+		if len(parsed) >= 6:
+			self.timestamp = parsed[1].replace(" ", "")
+
+			parsed[2] = parsed[2].replace(" ", "")
+			
+			if os.path.islink(parsed[2]): 
+				self.filename = os.path.realpath(parsed[2])
+			else:
+				self.filename = parsed[2]
+
+			self.linenum = parsed[3]
+
+			#self.level = "<%s>" % parsed[5]
+			self.level = parsed[5]
+
+			self.message = msg[msg.find('>')+1:]
+			#self.message = ""
+			#for tmp in parsed[6:]:
+			#	self.message = self.message + tmp
+		else:
+			self.message = msg
+			self.filename = self.linenum = self.level = self.timestamp = "<not found>"
+
+	def __init__(self, string):
+		self.parse(string)
+
+	def dump(self):
+		print("  ==> time 	: %s " % self.timestamp)
+		print("  ==> level 	: %s " % self.level)
+		print("  ==> message 	: %s " % self.message)
+		print("  ==> filename 	: %s " % self.filename)
+		print("  ==> linenum 	: %s " % self.linenum)
+
+	# FF|NN <LL> MM
+	def format(self, fmt = "FF;NN; <LL> TT MM"):
+		ret = ""
+		each_start = 0
+		while 1:
+			m = outfmt_delimiter.search(fmt, each_start)
+			if m == None:
+				ret = ret + fmt[each_start:]
+				break
+			ret = ret + fmt[each_start:m.start()]
+			## process ....
+			formatter = m.group(0)
+			addtoken = ""
+			if "FF" == formatter and "<not found>" != self.filename:
+				addtoken = self.filename
+			elif "NN" == formatter and "<not found>" != self.linenum:
+				addtoken = self.linenum
+			elif "MM" == formatter and "<not found>" != self.message:
+				addtoken = self.message
+			elif "LL" == formatter and "<not found>" != self.level:
+				addtoken = self.level
+			elif "TT" == formatter and "<not found>" != self.timestamp:
+				addtoken = self.timestamp
+
+			ret = ret + addtoken
+			each_start = m.end()
+		return ret
+
+
+def usage():
+	#print("Usage : logtrans <filename> <format> <root_path>")
+	#print("Usage : logtrans <filename> <format>")
+	print("Usage : logtrans <filename> <root_path> <format>")
+
+
+
+
+def main(orig_args):
+	argc = 	len(orig_args)
+
+	output_format = "FF|NN| ;<LL>;TT;MM;"
+	if argc == 0:
+		usage()
+		sys.exit(2)
+	elif argc == 1:
+		path_to_logfile = orig_args[0]
+		root_path = "."
+	elif argc == 2:
+		path_to_logfile = orig_args[0]
+		root_path = orig_args[1]
+	elif argc == 3:
+		path_to_logfile = orig_args[0]
+		root_path = orig_args[1]
+		output_format = orig_args[2]
+	else:
+		usage()
+		sys.exit(2)
+
+	if False == is_valid_path(root_path):
+		print("arg #2, root_path is invalid")
+		sys.exit(2)
+	
+	try: f = open(sys.argv[1], 'r')
+	except: 
+		print("!!! couldn't open %s !!!" % file)
+		usage()
+		sys.exit(2)
+
+	while 1:
+		line = f.readline()
+		line = line.rstrip("\r\n")
+		if not line: break
+		curline = LogMessage(line)
+		if 1 == debug:
+			print("\n- Original : %s" % line)
+			curline.dump()
+			continue
+
+		if root_path[-1] == '/':
+			path_to_kernel = root_path + postfix_to_kernel 
+		else:
+			path_to_kernel = root_path + '/' + postfix_to_kernel 
+		curline.filename = refine_path(curline.filename, path_to_kernel, root_path)
+
+		##################################################
+		#print( curline.format( "FF|NN| <LL> TT MM") )
+		print( curline.format(output_format) )
+
+	f.close();
+
+
+if __name__=='__main__':
+	main(sys.argv[1:])

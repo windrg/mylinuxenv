@@ -165,19 +165,22 @@ end
 # __________________gdb options_________________
 
 # set to 1 to have ARM target debugging as default, use the "arm" command to switch inside gdb
-set $ARM = 0
+set $ARM = 1
 # set to 0 if you have problems with the colorized prompt - reported by Plouj with Ubuntu gdb 7.2
 set $COLOUREDPROMPT = 1
 # Colour the first line of the disassembly - default is green, if you want to change it search for
 # SETCOLOUR1STLINE and modify it :-)
 set $SETCOLOUR1STLINE = 0
 # set to 0 to remove display of objectivec messages (default is 1)
-set $SHOWOBJECTIVEC = 1
+#set $SHOWOBJECTIVEC = 1
+#cysh we don't use Objective C
+set $SHOWOBJECTIVEC = 0
 # set to 0 to remove display of cpu registers (default is 1)
 set $SHOWCPUREGISTERS = 1
 # set to 1 to enable display of stack (default is 0)
-set $SHOWSTACK = 0
+set $SHOWSTACK = 1
 # set to 1 to enable display of data window (default is 0)
+#cysh ???
 set $SHOWDATAWIN = 0
 # set to 0 to disable coloured display of changed registers
 set $SHOWREGCHANGES = 1
@@ -188,7 +191,7 @@ set $SKIPEXECUTE = 0
 # 1 = use stepo (do not get into calls), 0 = use stepi (step into calls)
 set $SKIPSTEP = 1
 # show the ARM opcodes - change to 0 if you don't want such thing (in x/i command)
-set $ARMOPCODES = 1
+set $ARMOPCODES = 0
 # x86 disassembly flavor: 0 for Intel, 1 for AT&T
 set $X86FLAVOR = 0
 # use colorized output or not
@@ -197,8 +200,7 @@ set $USECOLOR = 1
 set confirm off
 set verbose off
 
-#cysh already set
-#set output-radix 0x10
+set output-radix 0x10
 set input-radix 0x10
 
 # These make gdb never pause in its output
@@ -211,6 +213,10 @@ set $SHOW_NEST_INSN = 0
 set $CONTEXTSIZE_STACK = 6
 set $CONTEXTSIZE_DATA  = 8
 set $CONTEXTSIZE_CODE  = 8
+
+#cysh
+set $SHOW_BACKTRACE = 1
+set $SHOW_LOCALS = 1
 
 # __________________end gdb options_________________
 #
@@ -230,7 +236,9 @@ set $WHITE = 7
 # CHANGME: If you want to modify the "theme" change the colors here
 #          or just create a ~/.gdbinit.local and set these variables there
 set $COLOR_REGNAME = $GREEN
-set $COLOR_REGVAL = $BLACK
+#set $COLOR_REGVAL = $BLACK
+# cysh $BLACK is so dark, too hard to reckon
+set $COLOR_REGVAL = $WHITE
 set $COLOR_REGVAL_MODIFIED  = $RED
 set $COLOR_SEPARATOR = $BLUE
 set $COLOR_CPUFLAGS = $RED
@@ -297,6 +305,7 @@ end
 # can't use the color functions because we are using the set command
 if $COLOUREDPROMPT == 1
 	#set prompt \033[31mgdb$ \033[0m
+	#cysh
 	set prompt \033[31m(gdb) \033[0m
 end
 
@@ -304,6 +313,159 @@ end
 # can also be used to redefine anything else in particular the colors aka theming
 # just remap the color variables defined above
 source ~/.gdbinit.local
+
+# __________________CY's own settings_________________
+
+set history save on
+set history filename ~/.gdb_history
+#set output-radix 16
+
+define connect
+	#set remotebaud 115200 
+	target remote /dev/ttyUSB0
+	# if CONFIG_DEBUG_RODATA is set, you should use HW breakpoints
+	#hbreak panic
+	#hbreak sys_sync
+	# else, you can use just SW breakpoints
+	b panic
+	b sys_sync
+end
+
+define snoopdbg
+	set debug remote 1
+end
+document snoopdbg
+Dump out the gdb packets between host and target
+Plz don't use this except once checking the gdb connection
+This option may cause side effects, espeicailly on low-speed machine
+end
+
+define nosnoopdbg
+	set debug remote 0
+end
+document nosnoopdbg
+Disable to dump out the gdb packets between host and target
+end
+
+#cysh works well
+# DEPRECATED use 'monitor lsmod' instead of this after enabling CONFIG_KGDB_KDB
+define lsmod 
+	printf "Address\t\tModule\n"
+	set $m=(struct list_head *)&modules
+	set $done=0
+	while( !$done )
+		# list_head is 4-bytes into struct module
+		set $mp=(struct module *)((char *)$m->next - (char *)4)
+		printf "0x%08x\t%s\n", $mp, $mp->name
+		if ( $mp->list->next == &modules )
+			set $done=1
+		end
+		set $m=$m->next
+	end
+end
+document lsmod
+List the loaded kernel modules and their start addresses
+end
+
+#cysh works well
+define logs
+	printf "\n__log_buf 	: %08x\n", __log_buf
+	printf "log_start 	: %d\n", log_start
+	printf "log_end   	: %d\n", log_end
+	printf "log_buf_len  	: %d\n\n", log_buf_len
+end
+document logs
+Print the status of logs
+end
+
+#cysh works well, but so slow, damn it!!
+#cysh works well
+# DEPRECATED, do not use 'monitor dmesg' instead of this after enabling CONFIG_KGDB_KDB
+define dmesg
+	set $__log_buf= (char *)__log_buf
+	set $log_start=	$arg0
+	set $log_end= $arg1 
+	set $x=$log_start
+	echo "
+	while($x < $log_end)
+		set $c = (char)(($__log_buf)[$x++])
+		printf "%c", $c
+	end
+	echo "\n
+end
+document dmesg
+dmesg 
+Print the content of the kernel message buffer
+Usage : dmesg log_start log_end
+end
+
+define modinfo 
+	set $mp=(struct module *)$arg0
+	printf "\nName : %s \n", $mp->name
+	printf ".text : 0x%08x \n", $mp->module_core 
+	printf ".init.text : 0x%08x \n\n", $mp->module_init
+	printf " =>> add-symbol-file <path-to-file> 0x%08x -s .init.text 0x%08x \n\n", $mp->module_core, $mp->module_init
+end
+document modinfo 
+Print the information of the given module address
+end
+
+
+
+# android debug
+define set_path
+set solib-absolute-prefix ./out/target/product/universal_eur/symbols/system
+set solib-search-path ./out/target/product/universal_eur/symbols/system/lib
+end
+
+# __________________end CY's own settings_________________
+
+# _________________ Colorized GDB ________________________
+
+# keep trailing space on next line
+# this doesn't work well on gdbtui
+set prompt \033[0;33m(gdb)\033[0m
+
+#into .gdbinit
+shell mkfifo /tmp/colorPipe
+
+define hook-disassemble
+echo \n
+shell cat /tmp/colorPipe | c++filt | highlight --syntax=asm -s darkness -Oxterm256 &
+set logging redirect on
+set logging on /tmp/colorPipe
+end 
+
+define hookpost-disassemble
+hookpost-list
+end 
+
+define hook-list
+echo \n
+shell cat /tmp/colorPipe | c++filt | highlight --syntax=cpp -s darkness -Oxterm256 &
+set logging redirect on
+set logging on /tmp/colorPipe
+end 
+
+define hookpost-list
+set logging off 
+set logging redirect off 
+shell sleep 0.1s
+end 
+
+define hook-quit
+shell rm /tmp/colorPipe
+end 
+
+define re
+hookpost-disassemble
+echo \033[0m
+end 
+document re
+Restore colorscheme
+end 
+
+# _________________ end Colorized GDB _____________________
 
 # Initialize these variables else comparisons will fail for colouring
 # we must initialize all of them at once, 32 and 64 bits, and ARM.
@@ -551,6 +713,41 @@ define flagsarm
 # zero (Z), bit 30
 # Carry/Borrow/Extend (C), bit 29
 # Overflow (V), bit 28
+    color $COLOR_REGNAME
+    printf "\nCPSR : "
+    color $COLOR_REGVAL
+    printf "0x%08X ", $cpsr
+    # cysh : How to show the ops mode
+    if (($cpsr & 0x0000001f) == 0x00000017)
+        printf "(ABRT)"
+    else
+	if (($cpsr & 0x0000001f) == 0x00000011)
+		printf "(FIQ)"
+	else
+		if (($cpsr & 0x0000001f) == 0x00000012)
+			printf "(IRQ)"
+		else
+			if (($cpsr & 0x0000001f) == 0x00000013)
+				printf "(SUP)"
+			else
+				if (($cpsr & 0x0000001f) == 0x0000001f)
+					printf "(SYS)"
+				else
+					if (($cpsr & 0x0000001f) ==  0x0000001b)
+						printf "(UND)"
+					else
+						if (($cpsr & 0x0000001f) == 0x00000010)
+							printf "(USER)"
+						end
+					end
+				end
+			end
+		end
+	end
+    end 
+    printf " - "
+#    set $tmp_cpsr = $cpsr
+#    printf "[%08x : %02x]", $tmp_cpsr , ($cpsr & 0x0000001f)
     # negative/less than (N), bit 31 of CPSR
     # if ($cpsr->n & 1)
     # cysh : this phrase doesn't work so should be
@@ -671,34 +868,8 @@ define flagsarm
         set $_t_flag = 0
     end
     # TODO: GE bit ?
-    # cysh : How to show the ops mode
-    if (($cpsr & 0x0000001f) == 0x00000017)
-        printf "(ABRT)"
-    else
-	if (($cpsr & 0x0000001f) == 0x00000011)
-		printf "(FIQ)"
-	else
-		if (($cpsr & 0x0000001f) == 0x00000012)
-			printf "(IRQ)"
-		else
-			if (($cpsr & 0x0000001f) == 0x00000013)
-				printf "(SUP)"
-			else
-				if (($cpsr & 0x0000001f) == 0x0000001f)
-					printf "(SYS)"
-				else
-					if (($cpsr & 0x0000001f) ==  0x0000001b)
-						printf "(UND)"
-					else
-						if (($cpsr & 0x0000001f) == 0x00000010)
-							printf "(USER)"
-						end
-					end
-				end
-			end
-		end
-	end
-    end
+
+
 
 end
 document flagsarm
@@ -793,15 +964,29 @@ end
 
 define eflags
     if $ARM == 1
+              # ($cpsr->n & 1), ($cpsr->z & 1), \
+              # ($cpsr->c & 1), ($cpsr->v & 1)  
         printf "     N <%d>  Z <%d>  C <%d>  V <%d>",\
-               ($cpsr->n & 1), ($cpsr->z & 1), \
-               ($cpsr->c & 1), ($cpsr->v & 1)
+		(($cpsr & 0x80000000) == 0x80000000), \
+		(($cpsr & 0x40000000) == 0x40000000), \
+		(($cpsr & 0x20000000) == 0x20000000), \
+		(($cpsr & 0x10000000) ==  0x10000000)
+
+              # ($cpsr->q & 1), ($cpsr->j & 1),\
+              # ($cpsr->ge), ($cpsr->e & 1), ($cpsr->a & 1)
         printf "  Q <%d>  J <%d>  GE <%d>  E <%d>  A <%d>",\
-               ($cpsr->q & 1), ($cpsr->j & 1),\
-               ($cpsr->ge), ($cpsr->e & 1), ($cpsr->a & 1)
+		(($cpsr & 0x08000000) == 0x08000000), \
+		(($cpsr & 0x01000000) == 0x01000000), \
+		(($cpsr & 0x000f0000) == 0x000f0000), \
+		(($cpsr & 0x00000200) == 0x00000200), \
+		(($cpsr & 0x00000100) == 0x00000100)
+
+              # ($cpsr->i & 1), ($cpsr->f & 1), \
+              # ($cpsr->t & 1)
         printf "  I <%d>  F <%d>  T <%d> \n",\
-               ($cpsr->i & 1), ($cpsr->f & 1), \
-               ($cpsr->t & 1)
+		(($cpsr & 0x00000080) == 0x00000080), \
+		(($cpsr & 0x00000040) == 0x00000040), \
+		(($cpsr & 0x00000020) == 0x00000020)
      else
         printf "     OF <%d>  DF <%d>  IF <%d>  TF <%d>",\
                (($eflags >> 0xB) & 1), (($eflags >> 0xA) & 1), \
@@ -1666,6 +1851,7 @@ Usage: dd ADDR
 end
 
 
+#cysh now it doesn't fit ....
 define datawin
     if $ARM == 1
         if ((($r0 >> 0x18) == 0x40) || (($r0 >> 0x18) == 0x08) || (($r0 >> 0x18) == 0xBF))
@@ -2157,28 +2343,33 @@ define context
 	    color $CYAN
     end
     if $SHOWSTACK == 1
-    	color $COLOR_SEPARATOR
-		if (sizeof(void *) == 8)
-		    printf "[0x%04X:0x%016lX]", $ss, $rsp
-		else
-    	    printf "[0x%04X:0x%08X]", $ss, $esp
-    	end
-        color $COLOR_SEPARATOR
-		printf "-------------------------"
-    	printf "-----------------------------"
-	    if (sizeof(void *) == 8)
-	        printf "-------------------------------------"
-	    end
-	    color $COLOR_SEPARATOR
-	    color_bold
-	    printf "[stack]\n"
-    	color_reset
-    	set $context_i = $CONTEXTSIZE_STACK
-    	while ($context_i > 0)
-       	    set $context_t = $sp + 0x10 * ($context_i - 1)
-       	    hexdump $context_t
-       	    set $context_i--
-    	end
+	#cysh it doesn't work in ARM
+        if $ARM == 1
+	#FIXME : ARM
+	else
+		color $COLOR_SEPARATOR
+			if (sizeof(void *) == 8)
+			    printf "[0x%04X:0x%016lX]", $ss, $rsp
+			else
+		    printf "[0x%04X:0x%08X]", $ss, $esp
+		end
+		color $COLOR_SEPARATOR
+			printf "-------------------------"
+		printf "-----------------------------"
+		    if (sizeof(void *) == 8)
+			printf "-------------------------------------"
+		    end
+		    color $COLOR_SEPARATOR
+		    color_bold
+		    printf "[stack]\n"
+		color_reset
+		set $context_i = $CONTEXTSIZE_STACK
+		while ($context_i > 0)
+		    set $context_t = $sp + 0x10 * ($context_i - 1)
+		    hexdump $context_t
+		    set $context_i--
+		end
+	end
     end
     # show the objective C message being passed to msgSend
     if $SHOWOBJECTIVEC == 1
@@ -2276,6 +2467,61 @@ define context
 	    printf "\n"
 	end
     color_reset
+
+    #cysh
+    if $SHOW_BACKTRACE == 1
+	    color $COLOR_SEPARATOR
+	    printf "--------------------------------------------------------------------------"
+	    if (sizeof(void *) == 8)
+		    printf "---------------------------------------------"
+		end
+		color $COLOR_SEPARATOR
+		color_bold
+	    printf "[backtrace]\n"
+	    color_reset
+
+	    color $GREEN
+	    bt 
+	    color_reset
+
+	    color $COLOR_SEPARATOR
+	    printf "----------------------------------------"
+	    printf "----------------------------------------"
+	    if (sizeof(void *) == 8)
+		printf "---------------------------------------------\n"
+		else
+		    printf "\n"
+		end
+	    color_reset
+    end
+
+
+    #cysh
+    if $SHOW_LOCALS == 1
+	    color $COLOR_SEPARATOR
+	    printf "--------------------------------------------------------------------------"
+	    if (sizeof(void *) == 8)
+		    printf "---------------------------------------------"
+		end
+		color $COLOR_SEPARATOR
+		color_bold
+	    printf "[locals]\n"
+	    color_reset
+
+	    color $RED
+	    info locals 
+	    color_reset
+
+	    color $COLOR_SEPARATOR
+	    printf "----------------------------------------"
+	    printf "----------------------------------------"
+	    if (sizeof(void *) == 8)
+		printf "---------------------------------------------\n"
+		else
+		    printf "\n"
+		end
+	    color_reset
+    end
 end
 document context
 Print context window, i.e. regs, stack, ds:esi and disassemble cs:eip.
@@ -2586,12 +2832,19 @@ end
 # negative/less than (N), bit 31 of CPSR
 define cfn
     if $ARM == 1
-    	set $tempflag = $cpsr->n
-        if ($tempflag & 1)
-            set $cpsr->n = $tempflag&~0x1
-        else
-            set $cpsr->n = $tempflag|0x1
-        end
+    	#set $tempflag = $cpsr->n
+        #if ($tempflag & 1)
+        #    set $cpsr->n = $tempflag&~0x1
+        #else
+        #    set $cpsr->n = $tempflag|0x1
+        #end
+	# cysh
+	set $tempflag = $cpsr & 0x80000000
+	if ( $tempflag )
+	    set $cpsr &= ~0x80000000
+	else
+	    set $cpsr |= 0x80000000
+	end
     end
 end
 document cfn
@@ -2602,12 +2855,19 @@ end
 define cfc
 # Carry/Borrow/Extend (C), bit 29
     if $ARM == 1
-	    set $tempflag = $cpsr->c
-        if ($tempflag & 1)
-            set $cpsr->c = $tempflag&~0x1
-        else
-            set $cpsr->c = $tempflag|0x1
-        end
+    	#set $tempflag = $cpsr->c
+        #if ($tempflag & 1)
+        #    set $cpsr->c = $tempflag&~0x1
+        #else
+        #    set $cpsr->c = $tempflag|0x1
+        #end
+	# cysh
+	set $tempflag = $cpsr & 0x20000000
+	if ( $tempflag )
+	    set $cpsr &= ~0x20000000
+	else
+	    set $cpsr |= 0x20000000
+	end
      else
         if ($eflags & 1)
             set $eflags = $eflags&~0x1
@@ -2648,12 +2908,19 @@ end
 define cfz
 # zero (Z), bit 30
     if $ARM == 1
- 	    set $tempflag = $cpsr->z
-        if ($tempflag & 1)
-            set $cpsr->z = $tempflag&~0x1
-        else
-            set $cpsr->z = $tempflag|0x1
-        end
+ 	#    set $tempflag = $cpsr->z
+        #if ($tempflag & 1)
+        #    set $cpsr->z = $tempflag&~0x1
+        #else
+        #    set $cpsr->z = $tempflag|0x1
+        #end
+	# cysh
+	set $tempflag = $cpsr & 0x40000000
+	if ( $tempflag )
+	    set $cpsr &= ~0x40000000
+	else
+	    set $cpsr |= 0x40000000
+	end
      else
         if (($eflags >> 6) & 1)
             set $eflags = $eflags&~0x40
@@ -2732,12 +2999,19 @@ end
 # Overflow (V), bit 28
 define cfv
     if $ARM == 1
-    	set $tempflag = $cpsr->v
-        if ($tempflag & 1)
-            set $cpsr->v = $tempflag&~0x1
-        else
-            set $cpsr->v = $tempflag|0x1
-        end
+    	#set $tempflag = $cpsr->v
+        #if ($tempflag & 1)
+        #    set $cpsr->v = $tempflag&~0x1
+        #else
+        #    set $cpsr->v = $tempflag|0x1
+        #end
+	# cysh
+	set $tempflag = $cpsr & 0x10000000
+	if ( $tempflag )
+	    set $cpsr &= ~0x10000000
+	else
+	    set $cpsr |= 0x10000000
+	end
     end
 end
 document cfv
@@ -2758,7 +3032,9 @@ define nop
   
     if $ARM == 1
         if ($argc == 1)
-            if ($cpsr->t &1)
+            #if ($cpsr->t &1) 
+	    #cysh
+    	    if ($cpsr & 0x00000020)
                 # thumb
                 set *(short *)$arg0 = 0x46c0
             else
@@ -2767,7 +3043,9 @@ define nop
             end
         else
         	set $addr = $arg0
-        	if ($cpsr->t & 1)
+        	#if ($cpsr->t & 1)
+	        #cysh
+	        if ($cpsr & 0x00000020)
     	    	# thumb
 			    while ($addr < $arg1)
 				    set *(short *)$addr = 0x46c0
@@ -3145,11 +3423,12 @@ end
 define hook-stop
 # Display instructions formats
     if $ARM == 1
-        if $ARMOPCODES == 1
-            set arm show-opcode-bytes 1
-        else
-            set arm show-opcode-bytes 1
-        end
+	#cysh it doesn't support 'show-opcode-bytes' now
+        #if $ARMOPCODES == 1
+        #    set arm show-opcode-bytes 1
+        #else
+        #    set arm show-opcode-bytes 0
+        #end
     else
         if $X86FLAVOR == 0
             set disassembly-flavor intel
@@ -3530,11 +3809,12 @@ end
 
 
 define arm
-    if $ARMOPCODES == 1
-        set arm show-opcode-bytes 1
-    else
-       set arm show-opcode-bytes 1
-    end
+    #cysh it doesn't support 'show-opcode-bytes' now
+    #if $ARMOPCODES == 1
+    #    set arm show-opcode-bytes 1
+    #else
+    #   set arm show-opcode-bytes 0
+    #end
     set $ARM = 1
 end
 document arm

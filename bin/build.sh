@@ -47,9 +47,7 @@ function build_kernel()
 	echo "make"
 	echo
 	#make -j$CPU_JOB_NUM > /dev/null ARCH=arm CROSS_COMPILE=$KERNEL_CROSS_COMPILE_PATH
-	#cysh
 	make -j$CPU_JOB_NUM V=1 ARCH=arm CROSS_COMPILE=$KERNEL_CROSS_COMPILE_PATH
-
 	check_exit
 	END_TIME=`date +%s`
 
@@ -75,7 +73,6 @@ function build_android()
         echo "make -j$CPU_JOB_NUM"
         echo
         #make -j$CPU_JOB_NUM
-	#cysh
         make -j$CPU_JOB_NUM showcommands
         check_exit
 

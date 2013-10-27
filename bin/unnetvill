@@ -1,0 +1,28 @@
+#!/bin/sh
+
+echo "disconnect to cse41 !!!"
+sudo umount /tmp/myvill/cse41
+rm -rf /tmp/myvill/cse41
+
+echo "disconnect to freesia !!!"
+sudo umount /tmp/myvill/freesia
+rm -rf /tmp/myvill/freesia
+
+echo "disconnect to ishtar !!!"
+sudo umount /tmp/myvill/ishtar
+rm -rf /tmp/myvill/ishtar
+
+echo "disconnect to p510 !!!"
+sudo umount /tmp/myvill/p510
+rm -rf /tmp/myvill/p510
+
+echo "disconnect to pemirror !!!"
+sudo umount /tmp/myvill/pemirror
+rm -rf /tmp/myvill/pemirror
+
+rm -rf /tmp/myvill
+rm -rf /home/cy13shin/myvill
+
+echo " *** RESULT *** "
+df -h
+#ls -al ~/myvill
