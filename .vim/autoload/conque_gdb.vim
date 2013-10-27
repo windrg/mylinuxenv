@@ -392,17 +392,17 @@ function! conque_gdb#open(...)
             return
         endif
 
-        if g:conque_gdb_gdb_py_support
-            let l:extra = ' '
+        "if g:conque_gdb_gdb_py_support
+        "    let l:extra = ' '
+        "else
+        " Find out which gdb command script gdb should execute on startup.
+        sil let l:enable_confirm = system(s:gdb_command . ' -q -batch -ex "show confirm"')
+        if l:enable_confirm =~ '.*\s\+[Oo][Nn]\W.*'
+            let l:extra = ' -x ' . s:SCRIPT_DIR . 'gdbinit_confirm.gdb '
         else
-            " Find out which gdb command script gdb should execute on startup.
-            sil let l:enable_confirm = system(s:gdb_command . ' -q -batch -ex "show confirm"')
-            if l:enable_confirm =~ '.*\s\+[Oo][Nn]\W.*'
-                let l:extra = ' -x ' . s:SCRIPT_DIR . 'nopyc.gdb '
-            else
-                let l:extra = ' -x ' . s:SCRIPT_DIR . 'nopync.gdb '
-            endif
+            let l:extra = ' -x ' . s:SCRIPT_DIR . 'gdbinit_no_confirm.gdb '
         endif
+        "endif
 
         " Don't let user use the TUI feature. It does not work with ConqueGdb.
         let l:user_args = get(a:000, 0, '')
@@ -420,6 +420,7 @@ function! conque_gdb#open(...)
         catch
         endtry
         let s:is_gdb_startup = 0
+        file ConqueGDB
     endif
 endfunction
 
@@ -464,8 +465,10 @@ endfunction
 " Note that this is only supported on Unix where gdb has support for the
 " python API.
 function! conque_gdb#toggle_breakpoint(fullfile, line)
-    let l:command = "clear "
-    sil exe s:py . ' ' . s:gdb.var . '.vim_toggle_breakpoint("' . s:escape_to_py_file(a:fullfile) .'","'. a:line .'")'
+	let l:command = "clear "
+    if bufloaded(s:gdb.buffer_number) || s:gdb.active
+        sil exe s:py . ' ' . s:gdb.var . '.vim_toggle_breakpoint("' . s:escape_to_py_file(a:fullfile) .'","'. a:line .'")'
+    endif
     call conque_gdb#command(l:command . a:fullfile . ':' . a:line)
 endfunction
 

@@ -83,16 +83,25 @@ fi
 
 # some more ls aliases
 alias ll='ls -alF'
+alias llh='ls -alF -h'
 alias la='ls -A'
 alias l='ls -CF'
 alias v='vim'
+alias vd='vimdiff'
+alias vq='vim -q'
+alias f='find'
+alias s='source'
 alias his='history'
 alias ws='cd /home/cysh/ws'
-alias cyvil='cd /home/cysh/cyvil'
 alias gcom='gnome-commander'
 alias cs='cscope' 
 alias csd='cscope -d'
 alias hosts='cat /etc/hosts'
+alias m='miniterm.py /dev/ttyUSB0 -b 115200'
+alias vill='cd /home/cysh/myvill/'
+alias hgrep='history | grep'
+alias dvi='adb shell dmesg | vi'
+
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -116,21 +125,26 @@ fi
 
 export EDITOR=/usr/bin/vim
 
-export PATH=${PATH}:/home/cysh/bin
+
+export PATH=${PATH}:/home/cysh/bin:/home/cysh/bin/abin:/home/cysh/bin/adt-bundle-linux-x86-20130917/sdk/tools
+export PATH=/usr/lib/ccache:${PATH}:/home/cysh/bin:/home/cysh/bin/abin:/home/cysh/bin/adt-bundle-linux-x86-20130917/sdk/tools:/home/cysh/bin/adt-bundle-linux-x86-20130917/sdk/platform-tools
 
 # distcc
-export CONCURRENCY_LEVEL=40
-export DISTCC_HOSTS="elephant apple dingo localhost"
-export DISTCC_LOG=/tmp/distcc.log
-export DISTCC_VERBOSE=1
+#export CONCURRENCY_LEVEL=40
+#export DISTCC_HOSTS="elephant apple dingo localhost"
+#export DISTCC_LOG=/tmp/distcc.log
+#export DISTCC_VERBOSE=1
 
 # ccache
-#export USE_CCACHE=1
-#export CCACHE_DIR=/home/cysh/.ccache
+export USE_CCACHE=1
+export CCACHE_DIR=/home/cysh/.ccache
 #export CCACHE_PREFIX="distcc"
-#export CCACHE_LOGFILE=/tmp/ccache.log
+export CCACHE_LOGFILE=/tmp/ccache.log
 #export PATH=/usr/lib/ccache:${PATH}
 
-#git config
-#git config --global user.name "WinDragon"
-#git config --global user.email windrg00@gmail.com 
+#This should be copied to /root/.bashrc
+#export http_proxy="http://168.219.61.252:8080"
+#export https_proxy="http://168.219.61.252:8080"
+#export ftp_proxy="ftp://168.219.61.252:8080"
+#export socket_proxy="socket://168.219.61.252:8080"
+

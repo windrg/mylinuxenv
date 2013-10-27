@@ -20,9 +20,22 @@ set nocompatible
 
 "CY setting
 set nu
-colo koehler
+"colo koehler
+colo windrg
 set laststatus=2
 set statusline=%h%F%m%r%=[%l:%c(%p%%)]	
+
+" CY : highlighting that moves with the cursor
+" its colour need to be improved 
+"augroup CursorLine
+	"au!
+	"au VimEnter,WinEnter,BufWinEnter + setlocal cursorline
+	"au WinLeave * setlocal nocursorline
+"augroup END
+autocmd WinLeave * setlocal nocursorline
+autocmd WinEnter * setlocal cursorline
+set cursorline
+
 
 
 " allow backspacing over everything in insert mode
@@ -103,6 +116,8 @@ command DiffOrig vert new | set bt=nofile | r # | 0d_ | diffthis
 "set tags=/home/cysh/ws/tagtest/linux-2.6.32/tags
 "set tags=$CTAGS_DB
 
+let mapleader=","
+
 "cscope
 set csprg=/usr/bin/cscope
 set csto=0
@@ -173,6 +188,20 @@ func! Csf()
 endfunc
 nmap ,cf :call Csf()<cr>
 
+
+"just split!!
+func! Split()
+    exe "sp"
+endfunc
+nmap ,ss :call Split()<cr>
+ 
+"just split vertically!!
+func! VSplit()
+    exe "vs"
+endfunc
+nmap ,vv :call VSplit()<cr>
+ 
+
 " 1st fn key block
 map <F2> :ConqueGdb<CR>
 nnoremap <silent> <F3> :tabn<CR>
@@ -180,7 +209,7 @@ map <F4> <C-W><C-W>
 
 " 2nd fn key block
 nmap <F5> :call Stj()<CR>
-map <F6> :q!<CR>
+"map <F6> :q!<CR>
 map <F7> :res+1<CR>
 map <F8> :res-1<CR>
 
@@ -191,7 +220,8 @@ nnoremap <silent> <F9> :TlistToggle<CR>
 " >>> how to toggle auto-completion ??
 "Conque
 let g:ConqueTerm_StartMessages=0
-map <F12> :ConqueTermVSplit bash<CR>
+"map <F12> :ConqueTermVSplit bash<CR>
+map <F12> :q!<CR>
 
 "no map for reserved to toggle autocp!!!!!
 
@@ -212,10 +242,10 @@ map <C-O>	:tabe ./<CR>
 map <C-N>	:tabnew<CR>
 
 " ConqueGdb
-"let g:ConqueGdb_GdbExe = '/home/cy13shin/bin/abin/agdb'
+let g:ConqueGdb_GdbExe = '/home/cy13shin/bin/abin/agdb'
 
 " DirDiff
-let g:DirDiffExcludes = "CVS,*.class,*.o,*.cmd,*.swp,*.jar,vmlinux,*.dex,*.out,tags,cscope.files"
+let g:DirDiffExcludes = "CVS,*.class,*.o,*.cmd,*.swp,*.jar,vmlinux,*.dex,*.out,tags,cscope.files,.git"
 
 " diff colors
 "highlight DiffAdd cterm=none ctermfg=bg ctermbg=Green gui=none guifg=bg guibg=Green
