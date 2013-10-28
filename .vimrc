@@ -195,11 +195,23 @@ func! Split()
 endfunc
 nmap ,ss :call Split()<cr>
  
+"just split and open!!
+func! SplitOpen()
+    exe "sp ."
+endfunc
+nmap ,se :call SplitOpen()<cr>
+ 
 "just split vertically!!
 func! VSplit()
     exe "vs"
 endfunc
 nmap ,vv :call VSplit()<cr>
+ 
+"just split & openvertically!!
+func! VSplitOpen()
+    exe "vs ."
+endfunc
+nmap ,ve :call VSplitOpen()<cr>
  
 
 " 1st fn key block
