@@ -1,0 +1,42 @@
+* vimgrep/lvimgrep
+:vimgrep abcd %
+:vimgrep abcd **/*
+:vimgrep abcd **/*.c
+
+* working directory
+:pwd
+:cd %:p:h "To change to the directory of the currently open file
+:lcd %:p:h
+
+* show the error messages
+:echoerr
+
+* Replace/Exclude
+:%s/pattern/replace/g
+:%s//replace/g "after checking & searching with "/"
+:10,99s/pattern/replace/g
+- delete when it has the pattern
+:g/pattern/d
+:g//d
+:g/pattern/norm dd
+:v/pattern/d " delete lines doesn't have the pattern, here 'v' means 'invert'
+- print lines has the pattern
+:g/pattern/p
+
+* check key-mappings
+:map
+
+* check the current highlight colors
+:highlight
+
+* Enable/Disable the highlight search
+:set hlsearch
+:set nohlsearch
+
+* TODO list
+[ ] merge the old logcat.vim and this new one
+	https://github.com/naseer/logcat
+[ ] crdmesg
+	https://github.com/afrojer/vim-crdmesg/blob/master/syntax/crdmesg.vim
+[ ] syntastic
+[ ] set MarkLoad LOG automatically in case of detecting log files like as dmesg, logcat, log, 

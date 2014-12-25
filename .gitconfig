@@ -1,6 +1,20 @@
-[user]
-	name = WinDragon
-	email = windrg00@gmail.com
 [color]
 	ui = auto
-
+[core]
+        editor = vim
+[color]
+        ui = auto
+        diff = auto
+        status = auto
+        branch = auto
+[push]
+        default = tracking
+[user]
+	name = Changyong Shin
+	email = cy13.shin@samsung.com
+[diff]
+	tool = vimdiff
+[merge]
+	tool = vimdiff
+[alias]
+	tree = log --graph --full-history --all --color --date=short --pretty=format:\"%Cred%x09%h %Creset%ad%Cblue%d %Creset %s %C(bold)(%an)%Creset\"

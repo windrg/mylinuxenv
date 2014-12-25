@@ -78,3 +78,5 @@ highlight DiffAdd cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
 highlight DiffDelete cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
 highlight DiffChange cterm=bold ctermfg=10 ctermbg=17 gui=none guifg=bg guibg=Red
 highlight DiffText cterm=bold ctermfg=10 ctermbg=88 gui=none guifg=bg guibg=Red
+hi Pmenu ctermfg=242 ctermbg=0 guifg=242 guibg=0
+hi PmenuSel ctermfg=231 ctermbg=70 guifg=231 guibg=70

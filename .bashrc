@@ -3,7 +3,10 @@
 # for examples
 
 # If not running interactively, don't do anything
-[ -z "$PS1" ] && return
+case $- in
+    *i*) ;;
+      *) return;;
+esac
 
 # don't put duplicate lines or lines starting with space in the history.
 # See bash(1) for more options
@@ -13,8 +16,8 @@ HISTCONTROL=ignoreboth
 shopt -s histappend
 
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
+HISTSIZE=10000
+HISTFILESIZE=20000
 
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
@@ -28,7 +31,7 @@ shopt -s checkwinsize
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
 
@@ -91,6 +94,8 @@ alias vd='vimdiff'
 alias vq='vim -q'
 alias f='find'
 alias s='source'
+alias g='grep'
+alias e='egrep'
 alias his='history'
 alias ws='cd /home/cysh/ws'
 alias gcom='gnome-commander'
@@ -98,9 +103,19 @@ alias cs='cscope'
 alias csd='cscope -d'
 alias hosts='cat /etc/hosts'
 alias m='miniterm.py /dev/ttyUSB0 -b 115200'
-alias vill='cd /home/cysh/myvill/'
 alias hgrep='history | grep'
+alias psgrep='ps -ef | grep'
 alias dvi='adb shell dmesg | vi'
+alias sshmnc='ssh cy13.shin@mnc'
+
+# my ville
+alias vill='cd /home/cysh/vill/'
+#alias 510='cd /home/cysh/vill/510/'
+alias e6430='cd /home/cysh/vill/e6430/'
+alias mnc='cd /home/cysh/vill/mnc/'
+alias conn='cd /home/cysh/vill/conn/'
+#alias ishtar='cd /home/cysh/vill/ishtar/'
+#alias pe='cd /home/cysh/vill/pe/'
 
 
 # Add an "alert" alias for long running commands.  Use like so:
@@ -119,24 +134,28 @@ fi
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
 # sources /etc/bash.bashrc).
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
     . /etc/bash_completion
+  fi
 fi
 
 export EDITOR=/usr/bin/vim
 
 
-export PATH=${PATH}:/home/cysh/bin:/home/cysh/bin/abin:/home/cysh/bin/adt-bundle-linux-x86-20130917/sdk/tools
-export PATH=/usr/lib/ccache:${PATH}:/home/cysh/bin:/home/cysh/bin/abin:/home/cysh/bin/adt-bundle-linux-x86-20130917/sdk/tools:/home/cysh/bin/adt-bundle-linux-x86-20130917/sdk/platform-tools
+export PATH=${PATH}:/home/cysh/bin:/home/cysh/bin/abin:/home/cysh/bin/adt-bundle-linux-x86_64-20140702/sdk/tools
+export PATH=/usr/lib/ccache:${PATH}:/home/cysh/bin:/home/cysh/bin/abin:/home/cysh/bin/adt-bundle-linux-x86_64-20140702/sdk/tools:/home/cysh/bin/adt-bundle-linux-x86_64-20140702/sdk/platform-tools:/home/cysh/bin/frame_decode:/home/cysh/p4v-2014.1.888424/bin
 
 # distcc
-#export CONCURRENCY_LEVEL=40
-#export DISTCC_HOSTS="elephant apple dingo localhost"
-#export DISTCC_LOG=/tmp/distcc.log
-#export DISTCC_VERBOSE=1
+export CONCURRENCY_LEVEL=40
+export DISTCC_HOSTS="mnc localhost"
+export DISTCC_LOG=/tmp/distcc.log
+export DISTCC_VERBOSE=1
 
 # ccache
-export USE_CCACHE=1
+#export USE_CCACHE=1
 export CCACHE_DIR=/home/cysh/.ccache
 #export CCACHE_PREFIX="distcc"
 export CCACHE_LOGFILE=/tmp/ccache.log
@@ -147,4 +166,3 @@ export CCACHE_LOGFILE=/tmp/ccache.log
 #export https_proxy="http://168.219.61.252:8080"
 #export ftp_proxy="ftp://168.219.61.252:8080"
 #export socket_proxy="socket://168.219.61.252:8080"
-
