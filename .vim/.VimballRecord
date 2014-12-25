@@ -1,0 +1,2 @@
+mark-2.8.5.vmb: call delete('/home/cysh/.vim/autoload/mark.vim')|call delete('/home/cysh/.vim/autoload/mark/palettes.vim')|call delete('/home/cysh/.vim/plugin/mark.vim')|call delete('/home/cysh/.vim/doc/mark.txt')
+vimcommander_0.81.vba: call delete('/home/cysh/.vim/doc/vimcommander.txt')|call delete('/home/cysh/.vim/plugin/vimcommander.vim')
