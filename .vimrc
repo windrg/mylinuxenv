@@ -14,6 +14,91 @@ if v:progname =~? "evim"
   finish
 endif
 
+" set the runtime path to include Vundle and initialize
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+" alternatively, pass a path where Vundle should install plugins
+"call vundle#begin('~/some/path/here')
+
+" let Vundle manage Vundle, required
+  Plugin 'gmarik/Vundle.vim'
+
+"
+" " The following are examples of different formats supported.
+" " Keep Plugin commands between vundle#begin/end.
+" " plugin on GitHub repo
+" Plugin 'tpope/vim-fugitive'
+" " plugin from http://vim-scripts.org/vim/scripts.html
+" Plugin 'L9'
+" " Git plugin not hosted on GitHub
+" Plugin 'git://git.wincent.com/command-t.git'
+" " git repos on your local machine (i.e. when working on your own plugin)
+" Plugin 'file:///home/gmarik/path/to/plugin'
+" " The sparkup vim script is in a subdirectory of this repo called vim.
+" " Pass the path to set the runtimepath properly.
+" Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
+" " Avoid a name conflict with L9
+" Plugin 'user/L9', {'name': 'newL9'}
+"
+" All of your Plugins must be added before the following line
+"
+  Plugin 'vim-scripts/AnsiEsc.vim'
+  Plugin 'vim-scripts/DirDiff.vim'
+  Plugin 'vim-scripts/LogViewer'
+  Plugin 'vim-scripts/Logcat-syntax-highlighter'
+  "Plugin 'vim-scripts/Mark--Karkat' " not updated on github so determined to use in a old-fashioned way
+  Plugin 'vim-scripts/SearchComplete'
+  Plugin 'vim-scripts/grep.vim'
+  Plugin 'vim-scripts/hexman.vim'
+  Plugin 'vim-scripts/mru.vim'
+  Plugin 'vim-scripts/prop.vim'
+  Plugin 'vim-scripts/python.vim--Vasiliev'
+  Plugin 'vim-scripts/taglist.vim' " or tagbar
+
+  Plugin 'tpope/vim-fugitive'
+  Plugin 'gregsexton/gitv'
+  Plugin 'airblade/vim-gitgutter'
+
+  Plugin 'sjl/gundo.vim'
+
+  Plugin 'xolox/vim-session'
+  Plugin 'xolox/vim-misc'
+
+  Plugin 'tpope/vim-unimpaired'
+
+  Plugin 'scrooloose/syntastic'
+
+  Plugin 'bling/vim-airline'
+
+  "Plugin 'clone/vim-cecutil' " ???
+  
+  Plugin 'Valloric/YouCompleteMe' " use supertab if it's not available on your system.
+  	"Plugin 'ervandew/supertab' " use this if YCM is not available 
+
+
+  Plugin 'lpenz/vimcommander' 
+
+  Plugin 'tomasr/molokai'
+  Plugin 'vim-scripts/borland.vim'
+
+call vundle#end()            " requirelid
+" " filetype plugin indent on    " required
+" To ignore plugin indent changes, instead use:
+"filetype plugin on
+"
+" Brief help
+" :PluginList       - lists configured plugins
+" :PluginInstall    - installs plugins; append `!` to update or just
+" :PluginUpdate
+" :PluginSearch foo - searches for foo; append `!` to refresh local cache
+" :PluginClean      - confirms removal of unused plugins; append `!` to
+" auto-approve removal
+"
+" see :h vundle for more details or wiki for FAQ
+" Put your non-Plugin stuff after this line
+
+
+
 " Use Vim settings, rather then Vi settings (much better!).
 " This must be first, because it changes other options as a side effect.
 set nocompatible
@@ -23,6 +108,7 @@ set nu
 "colo koehler
 "colo windrg
 colo molokai
+"colo borland
 "colo zenburn
 "let g:molokai_original=1
 "let g:rehash256=1
@@ -77,52 +163,6 @@ if &t_Co > 2 || has("gui_running")
   set hlsearch
 endif
 
-
-" set the runtime path to include Vundle and initialize
-set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
-" alternatively, pass a path where Vundle should install plugins
-"call vundle#begin('~/some/path/here')
-
-" let Vundle manage Vundle, required
-  Plugin 'gmarik/Vundle.vim'
-"
-" " The following are examples of different formats supported.
-" " Keep Plugin commands between vundle#begin/end.
-" " plugin on GitHub repo
-" Plugin 'tpope/vim-fugitive'
-" " plugin from http://vim-scripts.org/vim/scripts.html
-" Plugin 'L9'
-" " Git plugin not hosted on GitHub
-" Plugin 'git://git.wincent.com/command-t.git'
-" " git repos on your local machine (i.e. when working on your own plugin)
-" Plugin 'file:///home/gmarik/path/to/plugin'
-" " The sparkup vim script is in a subdirectory of this repo called vim.
-" " Pass the path to set the runtimepath properly.
-" Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
-" " Avoid a name conflict with L9
-" Plugin 'user/L9', {'name': 'newL9'}
-"
-" All of your Plugins must be added before the following line
-"
-  Plugin 'Valloric/YouCompleteMe' " use supertab if it's not available on your system.
-  Plugin 'scrooloose/syntastic'
-
-call vundle#end()            " required
-" " filetype plugin indent on    " required
-" To ignore plugin indent changes, instead use:
-"filetype plugin on
-"
-" Brief help
-" :PluginList       - lists configured plugins
-" :PluginInstall    - installs plugins; append `!` to update or just
-" :PluginUpdate
-" :PluginSearch foo - searches for foo; append `!` to refresh local cache
-" :PluginClean      - confirms removal of unused plugins; append `!` to
-" auto-approve removal
-"
-" see :h vundle for more details or wiki for FAQ
-" Put your non-Plugin stuff after this line
 
 " Only do this part when compiled with support for autocommands.
 if has("autocmd")
@@ -462,7 +502,7 @@ nmap <leader>kk :call MyComment()<cr>
 "syn match mycomment / cysh /
 "highlight link mycommet mycomment_color
 
-let g:SuperTabDefaultCompletionType = "context" "cysh This must be set once using SuperTab
+"let g:SuperTabDefaultCompletionType = "context"
 "let g:snips_trigger_key='<c-space>'
 
 " get the current position
@@ -542,3 +582,13 @@ nmap <leader>mm :!mc<cr>
 "Syntastic makes Vim so slower thus removed it
 "let g:syntastic_check_on_open=1
 let g:syntastic_enable_sign=1
+
+"Airline
+let g:airline#extension#tabline#enabled=1
+let g:airline_left_sep=''
+let g:airline_right_sep=''
+let g:airline_theme='powerlineish'
+"let g:airline_theme='wombat'
+
+"Tabline
+hi TabLineSel term=bold cterm=bold ctermfg=22 ctermbg=148 gui=bold guifg=#005f00 guibg=#afd700
